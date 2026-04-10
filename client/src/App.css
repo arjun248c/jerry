@@ -1,21 +1,183 @@
+/* Enhanced App Styles */
 .App {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+  text-align: left;
+  min-height: 100vh;
+  background: var(--background-color);
+  color: var(--text-color);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Global Navigation */
+.global-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--surface-color);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow);
+}
+
+.nav-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  max-width: 100%;
+}
+
+.nav-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 8px 16px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 14px;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-btn:hover {
+  background: var(--light-color);
+  border-color: var(--primary-color);
+}
+
+.back-btn {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.back-btn:hover {
+  background: color-mix(in srgb, var(--primary-color) 85%, black);
+}
+
+.nav-title {
+  flex: 1;
+  text-align: center;
+  margin: 0 20px;
+}
+
+.nav-title h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.nav-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  color: var(--secondary-color);
+}
+
+.nav-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.theme-btn,
+.settings-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+/* App Content */
+.app-content {
+  min-height: 100vh;
+  transition: var(--transition);
+}
+
+.app-content.with-nav {
+  min-height: calc(100vh - 65px);
+}
+
+/* Quick Actions Floating Button */
+.quick-actions {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+}
+
+.quick-action-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary-color);
+  color: white;
+  font-size: 24px;
+  font-weight: 300;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.quick-action-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+}
+
+.quick-action-btn.main {
+  width: 64px;
+  height: 64px;
+  font-size: 28px;
+  margin-bottom: 12px;
+}
+
+.quick-action-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: var(--transition);
+  pointer-events: none;
+}
+
+.quick-actions:hover .quick-action-menu {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+}
+
+.quick-action-menu .quick-action-btn {
+  width: 48px;
+  height: 48px;
+  font-size: 18px;
+  background: var(--secondary-color);
+}
+
+.quick-action-menu .quick-action-btn:hover {
+  background: var(--primary-color);
+}
+
+/* Legacy styles for backward compatibility */
 .nav-bar {
   display: flex;
   align-items: center;
-  padding: 10px 20px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #ddd;
-  gap: 20px;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  gap: 1rem;
 }
 
 .nav-bar button {
-  padding: 8px 16px;
-  background: #6c757d;
+  padding: 0.5rem 1rem;
+  background-color: #007bff;
   color: white;
   border: none;
   border-radius: 4px;
@@ -23,11 +185,198 @@
 }
 
 .nav-bar button:hover {
-  background: #5a6268;
+  background-color: #0056b3;
 }
 
 .nav-bar h1 {
   margin: 0;
-  font-size: 20px;
-  color: #333;
+  font-size: 1.5rem;
 }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .nav-content {
+    padding: 8px 16px;
+  }
+  
+  .nav-title {
+    margin: 0 12px;
+  }
+  
+  .nav-title h1 {
+    font-size: 18px;
+  }
+  
+  .nav-subtitle {
+    display: none;
+  }
+  
+  .quick-actions {
+    bottom: 16px;
+    right: 16px;
+  }
+  
+  .quick-action-btn.main {
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
+  }
+  
+  .quick-action-menu .quick-action-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-content {
+    padding: 8px 12px;
+  }
+  
+  .nav-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  
+  .nav-title h1 {
+    font-size: 16px;
+  }
+  
+  .nav-actions {
+    gap: 4px;
+  }
+  
+  .theme-btn,
+  .settings-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .global-nav,
+  .quick-actions {
+    display: none;
+  }
+  
+  .app-content {
+    min-height: auto;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .nav-btn {
+    border-width: 2px;
+  }
+  
+  .quick-action-btn {
+    border: 2px solid white;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .quick-action-btn,
+  .quick-action-menu,
+  .nav-btn,
+  .app-content {
+    transition: none;
+  }
+  
+  .quick-action-btn:hover {
+    transform: none;
+  }
+}
+
+/* Focus Styles for Accessibility */
+.nav-btn:focus,
+.quick-action-btn:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Loading States */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--border-color);
+  border-top: 4px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error States */
+.error-boundary {
+  padding: 40px;
+  text-align: center;
+  color: var(--danger-color);
+}
+
+.error-boundary h2 {
+  margin-bottom: 16px;
+  color: var(--text-color);
+}
+
+.error-boundary button {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  margin-top: 16px;
+}
+
+/* Utility Classes */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-3 { margin-top: 1rem; }
+.mt-4 { margin-top: 1.5rem; }
+
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-3 { margin-bottom: 1rem; }
+.mb-4 { margin-bottom: 1.5rem; }
+
+.p-1 { padding: 0.25rem; }
+.p-2 { padding: 0.5rem; }
+.p-3 { padding: 1rem; }
+.p-4 { padding: 1.5rem; }

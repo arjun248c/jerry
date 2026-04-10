@@ -56,7 +56,15 @@ app.post('/api/workflows', async (req, res) => {
       nodes: req.body.nodes || [],
       connections: req.body.connections || [],
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      version: req.body.version || 1,
+      settings: req.body.settings || {
+        timeout: 300000,
+        retryCount: 3,
+        parallelExecution: false,
+        errorHandling: 'stop' as const,
+        notifications: []
+      }
     };
 
     await db.saveWorkflow(workflow);
@@ -119,18 +127,95 @@ app.delete('/api/workflows/:id', async (req, res) => {
   }
 });
 
-// Webhook endpoint for external triggers
+// Webhook endpoint for external triggers (POST — receives data)
 app.post('/webhook/:workflowId', async (req, res) => {
   try {
     const workflows = await db.getWorkflows();
     const workflow = workflows.find(w => w.id === req.params.workflowId && w.active);
-    
+
     if (!workflow) {
       return res.status(404).json({ error: 'Active workflow not found' });
     }
 
-    const execution = await engine.executeWorkflow(workflow, req.body);
+    const execution = await engine.executeWorkflow(workflow, {
+      body: req.body,
+      headers: req.headers,
+      query: req.query,
+      params: req.params
+    });
     res.json(execution);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// WhatsApp webhook verification (GET — Meta sends a challenge that must be echoed back)
+app.get('/webhook/:workflowId', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || 'jerry-workflow-token';
+
+  if (mode === 'subscribe' && token === verifyToken) {
+    console.log(`[WhatsApp] Webhook verified for workflow ${req.params.workflowId}`);
+    res.status(200).send(challenge as string);
+  } else {
+    console.warn(`[WhatsApp] Webhook verification failed — expected token: ${verifyToken}`);
+    res.status(403).json({ error: 'Webhook verification failed. Check WHATSAPP_VERIFY_TOKEN.' });
+  }
+});
+
+// Load a pre-built workflow template
+app.get('/api/templates', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const templatesDir = path.join(__dirname, '../../templates');
+
+  try {
+    if (!fs.existsSync(templatesDir)) {
+      return res.json([]);
+    }
+    const files = fs.readdirSync(templatesDir).filter((f: string) => f.endsWith('.json'));
+    const templates = files.map((file: string) => {
+      const content = JSON.parse(fs.readFileSync(path.join(templatesDir, file), 'utf8'));
+      return { filename: file, ...content };
+    });
+    res.json(templates);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Import a template as a new workflow
+app.post('/api/templates/:filename/import', async (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const templatesDir = path.join(__dirname, '../../templates');
+  const filePath = path.join(templatesDir, req.params.filename);
+
+  try {
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+    const template = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const workflow: Workflow = {
+      ...template.workflow,
+      id: uuidv4(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      active: false,
+      version: 1,
+      settings: template.workflow.settings || {
+        timeout: 300000,
+        retryCount: 3,
+        parallelExecution: false,
+        errorHandling: 'stop' as const,
+        notifications: []
+      }
+    };
+    await db.saveWorkflow(workflow);
+    res.json({ success: true, workflow });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

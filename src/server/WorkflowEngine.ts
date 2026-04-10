@@ -29,7 +29,15 @@ export class WorkflowEngine {
       workflowId: workflow.id,
       status: 'running',
       startedAt: new Date(),
-      data: {}
+      data: triggerData || {},
+      nodeExecutions: [],
+      metrics: {
+        totalTime: 0,
+        nodeCount: 0,
+        successCount: 0,
+        errorCount: 0,
+        dataProcessed: 0
+      }
     };
 
     try {

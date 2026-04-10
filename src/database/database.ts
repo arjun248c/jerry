@@ -70,7 +70,15 @@ export class Database {
             nodes: JSON.parse(row.nodes),
             connections: JSON.parse(row.connections),
             createdAt: new Date(row.created_at),
-            updatedAt: new Date(row.updated_at)
+            updatedAt: new Date(row.updated_at),
+            version: 1,
+            settings: {
+              timeout: 300000,
+              retryCount: 3,
+              parallelExecution: false,
+              errorHandling: 'stop' as const,
+              notifications: []
+            }
           }));
           resolve(workflows);
         }
@@ -118,7 +126,15 @@ export class Database {
             startedAt: new Date(row.started_at),
             finishedAt: row.finished_at ? new Date(row.finished_at) : undefined,
             data: JSON.parse(row.data || '{}'),
-            error: row.error
+            error: row.error,
+            nodeExecutions: [],
+            metrics: {
+              totalTime: 0,
+              nodeCount: 0,
+              successCount: 0,
+              errorCount: 0,
+              dataProcessed: 0
+            }
           }));
           resolve(executions);
         }

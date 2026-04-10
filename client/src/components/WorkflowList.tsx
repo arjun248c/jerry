@@ -31,10 +31,10 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({ onSelectWorkflow, on
 
   const loadExecutions = async () => {
     try {
-      const allExecutions = await api.getExecutions();
+      const result = await api.getExecutions();
       const executionsByWorkflow: Record<string, any[]> = {};
       
-      allExecutions.forEach(execution => {
+      result.data.forEach((execution: any) => {
         if (!executionsByWorkflow[execution.workflowId]) {
           executionsByWorkflow[execution.workflowId] = [];
         }
