@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "nodemon --exec ts-node src/server/server.ts",
     "client:dev": "cd client && npm start",
-    "build": "tsc && cd client && npm run build",
+    "build": "tsc && cd client && npm install && npm run build",
     "build:server": "tsc",
     "build:client": "cd client && npm run build",
     "start": "node dist/server/server.js",
