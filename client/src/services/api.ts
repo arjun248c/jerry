@@ -70,9 +70,13 @@ export const api = {
   },
 
   async saveWorkflow(workflow: Workflow): Promise<Workflow> {
-    const response = workflow.id && !workflow.id.startsWith('workflow_')
-      ? await axiosInstance.put(`/workflows/${workflow.id}`, workflow)
-      : await axiosInstance.post('/workflows', workflow);
+    // Use PUT to update existing saved workflows (those with UUID IDs from the DB).
+    // Use POST for brand new temp-ID workflows (e.g. those starting with 'workflow_').
+    if (workflow.id && !workflow.id.startsWith('workflow_')) {
+      const response = await axiosInstance.put(`/workflows/${workflow.id}`, workflow);
+      return response.data;
+    }
+    const response = await axiosInstance.post('/workflows', workflow);
     return response.data;
   },
 
@@ -113,7 +117,15 @@ export const api = {
     }
     
     const response = await axiosInstance.get(`/executions?${params}`);
-    return response.data;
+    // Backend returns a plain array — wrap it into PaginatedResponse shape
+    const items: ExecutionData[] = Array.isArray(response.data) ? response.data : response.data?.data || [];
+    return {
+      data: items,
+      total: items.length,
+      page: 1,
+      limit: 50,
+      hasMore: false
+    } as unknown as PaginatedResponse<ExecutionData>;
   },
 
   async getExecution(executionId: string): Promise<ExecutionData> {

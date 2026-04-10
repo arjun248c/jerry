@@ -74,6 +74,34 @@ app.post('/api/workflows', async (req, res) => {
   }
 });
 
+// Update workflow (PUT)
+app.put('/api/workflows/:id', async (req, res) => {
+  try {
+    const workflow: Workflow = {
+      id: req.params.id,
+      name: req.body.name,
+      active: req.body.active ?? false,
+      nodes: req.body.nodes || [],
+      connections: req.body.connections || [],
+      createdAt: req.body.createdAt ? new Date(req.body.createdAt) : new Date(),
+      updatedAt: new Date(),
+      version: req.body.version || 1,
+      settings: req.body.settings || {
+        timeout: 300000,
+        retryCount: 3,
+        parallelExecution: false,
+        errorHandling: 'stop' as const,
+        notifications: []
+      }
+    };
+
+    await db.saveWorkflow(workflow);
+    res.json(workflow);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Execute workflow
 app.post('/api/workflows/:id/execute', async (req, res) => {
   try {
