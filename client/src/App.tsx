@@ -25,11 +25,13 @@ function App() {
     loadSettings();
     // Apply theme on startup
     document.documentElement.setAttribute('data-theme', settings.theme);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme);
     saveSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
 
   const loadSettings = () => {

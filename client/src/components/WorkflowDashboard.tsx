@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Workflow, ExecutionData, WorkflowAnalytics, SearchFilters } from '../types';
+import { Workflow, ExecutionData, SearchFilters } from '../types';
 import { api } from '../services/api';
 import './WorkflowDashboard.css';
 

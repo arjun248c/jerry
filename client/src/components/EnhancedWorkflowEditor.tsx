@@ -36,7 +36,7 @@ export const EnhancedWorkflowEditor: React.FC<WorkflowEditorProps> = ({ workflow
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStart, setConnectionStart] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showMinimap, setShowMinimap] = useState(true);
+  const [showMinimap] = useState(true);
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
   const [propertiesCollapsed, setPropertiesCollapsed] = useState(false);
   
@@ -90,6 +90,7 @@ export const EnhancedWorkflowEditor: React.FC<WorkflowEditorProps> = ({ workflow
         clearTimeout(autoSaveRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Auto-save functionality
@@ -102,6 +103,7 @@ export const EnhancedWorkflowEditor: React.FC<WorkflowEditorProps> = ({ workflow
         saveWorkflow();
       }, 2000);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, connections, settings.autoSave]);
   
   // Theme handling
@@ -485,6 +487,7 @@ export const EnhancedWorkflowEditor: React.FC<WorkflowEditorProps> = ({ workflow
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNode, selectedNodes, nodes]);
   
   const saveWorkflow = useCallback(() => {
@@ -682,7 +685,6 @@ export const EnhancedWorkflowEditor: React.FC<WorkflowEditorProps> = ({ workflow
                 const y2 = targetNode.position.y + 40;
                 
                 const dx = x2 - x1;
-                const dy = y2 - y1;
                 const curve = Math.abs(dx) * 0.3;
                 
                 const path = `M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`;

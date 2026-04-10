@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { WorkflowTemplate, Workflow } from '../types';
+import { WorkflowTemplate } from '../types';
 import './WorkflowTemplates.css';
 
 interface WorkflowTemplatesProps {
