@@ -344,10 +344,272 @@ export const WorkflowTemplates: React.FC<WorkflowTemplatesProps> = ({
             { id: 'conn-4', sourceNodeId: 'if-1', targetNodeId: 'cache-1' }
           ]
         }
+      },
+
+      // ── EMAIL → WHATSAPP TEMPLATES ──────────────────────────────────────────
+      {
+        id: 'template-6',
+        name: '📧→💬 Email to WhatsApp Alert',
+        description: 'When a new email arrives from a specific sender, automatically forward a summary as a WhatsApp message to one or more phone numbers.',
+        category: 'Email & WhatsApp',
+        tags: ['email', 'whatsapp', 'automation', 'alert', 'gmail'],
+        popularity: 97,
+        workflow: {
+          name: 'Email to WhatsApp Alert',
+          description: 'Auto-forward emails from specific senders to WhatsApp contacts',
+          nodes: [
+            {
+              id: 'schedule-ew1',
+              type: 'schedule',
+              name: '⏰ Check Emails Every 5 Min',
+              position: { x: 50, y: 150 },
+              parameters: {
+                cron: '*/5 * * * *',
+                description: 'Polls Gmail inbox every 5 minutes'
+              }
+            },
+            {
+              id: 'gmail-ew1',
+              type: 'gmailReader',
+              name: '📥 Read Gmail Inbox',
+              position: { x: 270, y: 150 },
+              parameters: {
+                user: 'your-email@gmail.com',
+                appPassword: 'YOUR_GMAIL_APP_PASSWORD',
+                limit: 5,
+                description: 'Fetches the latest 5 unread emails'
+              }
+            },
+            {
+              id: 'if-ew1',
+              type: 'if',
+              name: '🔍 Filter by Sender',
+              position: { x: 490, y: 150 },
+              parameters: {
+                condition: 'email.from.includes("boss@company.com")',
+                description: 'Only process emails from this specific sender. Change to your desired sender email.'
+              }
+            },
+            {
+              id: 'transform-ew1',
+              type: 'transform',
+              name: '✏️ Format WhatsApp Message',
+              position: { x: 710, y: 80 },
+              parameters: {
+                mapping: JSON.stringify({
+                  message: '📧 *New Email Alert!*\n\n*From:* {{email.from}}\n*Subject:* {{email.subject}}\n*Preview:* {{email.snippet}}\n\n_Received at {{email.date}}_'
+                }),
+                description: 'Formats the email details into a clean WhatsApp message'
+              }
+            },
+            {
+              id: 'whatsapp-ew1',
+              type: 'whatsapp',
+              name: '💬 Send WhatsApp Message',
+              position: { x: 930, y: 80 },
+              parameters: {
+                to: '+1234567890',
+                message: '📧 *New Email Alert!*\n\n*From:* {{email.from}}\n*Subject:* {{email.subject}}\n*Preview:* {{email.snippet}}',
+                accessToken: 'YOUR_WHATSAPP_ACCESS_TOKEN',
+                phoneNumberId: 'YOUR_PHONE_NUMBER_ID',
+                description: 'Sends the formatted message to the WhatsApp number. Add multiple numbers by duplicating this node.'
+              }
+            }
+          ],
+          connections: [
+            { id: 'c1', sourceNodeId: 'schedule-ew1', targetNodeId: 'gmail-ew1' },
+            { id: 'c2', sourceNodeId: 'gmail-ew1', targetNodeId: 'if-ew1' },
+            { id: 'c3', sourceNodeId: 'if-ew1', targetNodeId: 'transform-ew1' },
+            { id: 'c4', sourceNodeId: 'transform-ew1', targetNodeId: 'whatsapp-ew1' }
+          ]
+        }
+      },
+      {
+        id: 'template-7',
+        name: '🚨 VIP Email → WhatsApp Group Broadcast',
+        description: 'Monitor your inbox for emails from VIP senders and instantly broadcast the message to multiple WhatsApp numbers (team, family, group).',
+        category: 'Email & WhatsApp',
+        tags: ['email', 'whatsapp', 'broadcast', 'vip', 'group', 'gmail'],
+        popularity: 93,
+        workflow: {
+          name: 'VIP Email to WhatsApp Group Broadcast',
+          description: 'Broadcast VIP emails to multiple WhatsApp contacts simultaneously',
+          nodes: [
+            {
+              id: 'schedule-vip1',
+              type: 'schedule',
+              name: '⏰ Check Every 2 Minutes',
+              position: { x: 50, y: 200 },
+              parameters: {
+                cron: '*/2 * * * *',
+                description: 'Frequent polling for urgent VIP emails'
+              }
+            },
+            {
+              id: 'gmail-vip1',
+              type: 'gmailReader',
+              name: '📥 Read VIP Emails',
+              position: { x: 270, y: 200 },
+              parameters: {
+                user: 'your-email@gmail.com',
+                appPassword: 'YOUR_GMAIL_APP_PASSWORD',
+                limit: 3,
+                description: 'Reads the latest 3 unread emails'
+              }
+            },
+            {
+              id: 'if-vip1',
+              type: 'if',
+              name: '⭐ Is VIP Sender?',
+              position: { x: 490, y: 200 },
+              parameters: {
+                condition: 'email.from.includes("ceo@company.com") || email.from.includes("client@bigcorp.com")',
+                description: 'Checks if the email is from any of your VIP senders. Add more with ||.'
+              }
+            },
+            {
+              id: 'transform-vip1',
+              type: 'transform',
+              name: '✏️ Format Broadcast Message',
+              position: { x: 710, y: 130 },
+              parameters: {
+                mapping: JSON.stringify({
+                  message: '🚨 *URGENT EMAIL ALERT*\n\n*From:* {{email.from}}\n*Subject:* {{email.subject}}\n\n{{email.snippet}}\n\n_Please check your email immediately!_'
+                }),
+                description: 'Creates a formatted broadcast message'
+              }
+            },
+            {
+              id: 'whatsapp-vip1',
+              type: 'whatsapp',
+              name: '💬 Send to Person 1',
+              position: { x: 930, y: 50 },
+              parameters: {
+                to: '+1111111111',
+                message: '🚨 *URGENT:* Email from {{email.from}}\n*Subject:* {{email.subject}}\n\n{{email.snippet}}',
+                accessToken: 'YOUR_WHATSAPP_ACCESS_TOKEN',
+                phoneNumberId: 'YOUR_PHONE_NUMBER_ID',
+                description: 'First recipient — e.g. Team Lead'
+              }
+            },
+            {
+              id: 'whatsapp-vip2',
+              type: 'whatsapp',
+              name: '💬 Send to Person 2',
+              position: { x: 930, y: 200 },
+              parameters: {
+                to: '+2222222222',
+                message: '🚨 *URGENT:* Email from {{email.from}}\n*Subject:* {{email.subject}}\n\n{{email.snippet}}',
+                accessToken: 'YOUR_WHATSAPP_ACCESS_TOKEN',
+                phoneNumberId: 'YOUR_PHONE_NUMBER_ID',
+                description: 'Second recipient — e.g. Manager'
+              }
+            },
+            {
+              id: 'whatsapp-vip3',
+              type: 'whatsapp',
+              name: '💬 Send to Person 3',
+              position: { x: 930, y: 350 },
+              parameters: {
+                to: '+3333333333',
+                message: '🚨 *URGENT:* Email from {{email.from}}\n*Subject:* {{email.subject}}\n\n{{email.snippet}}',
+                accessToken: 'YOUR_WHATSAPP_ACCESS_TOKEN',
+                phoneNumberId: 'YOUR_PHONE_NUMBER_ID',
+                description: 'Third recipient — duplicate to add more people'
+              }
+            }
+          ],
+          connections: [
+            { id: 'c1', sourceNodeId: 'schedule-vip1', targetNodeId: 'gmail-vip1' },
+            { id: 'c2', sourceNodeId: 'gmail-vip1', targetNodeId: 'if-vip1' },
+            { id: 'c3', sourceNodeId: 'if-vip1', targetNodeId: 'transform-vip1' },
+            { id: 'c4', sourceNodeId: 'transform-vip1', targetNodeId: 'whatsapp-vip1' },
+            { id: 'c5', sourceNodeId: 'transform-vip1', targetNodeId: 'whatsapp-vip2' },
+            { id: 'c6', sourceNodeId: 'transform-vip1', targetNodeId: 'whatsapp-vip3' }
+          ]
+        }
+      },
+      {
+        id: 'template-8',
+        name: '📰 Newsletter → WhatsApp Daily Digest',
+        description: 'Every morning, fetch your newsletter/digest emails and send a summarized WhatsApp message to yourself or your team as a daily briefing.',
+        category: 'Email & WhatsApp',
+        tags: ['email', 'whatsapp', 'newsletter', 'digest', 'daily', 'summary'],
+        popularity: 88,
+        workflow: {
+          name: 'Newsletter to WhatsApp Daily Digest',
+          description: 'Daily morning email digest sent to WhatsApp',
+          nodes: [
+            {
+              id: 'schedule-nd1',
+              type: 'schedule',
+              name: '⏰ Every Morning at 8 AM',
+              position: { x: 50, y: 200 },
+              parameters: {
+                cron: '0 8 * * *',
+                description: 'Runs every day at 8:00 AM'
+              }
+            },
+            {
+              id: 'gmail-nd1',
+              type: 'gmailReader',
+              name: '📥 Fetch Newsletters',
+              position: { x: 270, y: 200 },
+              parameters: {
+                user: 'your-email@gmail.com',
+                appPassword: 'YOUR_GMAIL_APP_PASSWORD',
+                limit: 10,
+                description: 'Reads latest 10 emails — filters newsletters below'
+              }
+            },
+            {
+              id: 'filter-nd1',
+              type: 'filter',
+              name: '📋 Keep Newsletters Only',
+              position: { x: 490, y: 200 },
+              parameters: {
+                condition: 'item.from.includes("newsletter") || item.subject.toLowerCase().includes("digest") || item.subject.toLowerCase().includes("daily")',
+                description: 'Filters to keep only newsletter/digest emails'
+              }
+            },
+            {
+              id: 'transform-nd1',
+              type: 'transform',
+              name: '✏️ Build Digest Message',
+              position: { x: 710, y: 200 },
+              parameters: {
+                mapping: JSON.stringify({
+                  message: '📰 *Your Daily Email Digest*\n━━━━━━━━━━━━━━━\n{{#each emails}}\n📌 *{{this.subject}}*\n   From: {{this.from}}\n   {{this.snippet}}\n\n{{/each}}\n━━━━━━━━━━━━━━━\n_Generated at 8 AM_'
+                }),
+                description: 'Combines all newsletters into one WhatsApp message'
+              }
+            },
+            {
+              id: 'whatsapp-nd1',
+              type: 'whatsapp',
+              name: '💬 Send Morning Digest',
+              position: { x: 930, y: 200 },
+              parameters: {
+                to: '+1234567890',
+                message: '📰 *Your Daily Email Digest*\n\nGood morning! Here are your latest updates:\n\n{{digest_summary}}\n\n_Have a great day! 🌟_',
+                accessToken: 'YOUR_WHATSAPP_ACCESS_TOKEN',
+                phoneNumberId: 'YOUR_PHONE_NUMBER_ID',
+                description: 'Sends the morning digest to your WhatsApp'
+              }
+            }
+          ],
+          connections: [
+            { id: 'c1', sourceNodeId: 'schedule-nd1', targetNodeId: 'gmail-nd1' },
+            { id: 'c2', sourceNodeId: 'gmail-nd1', targetNodeId: 'filter-nd1' },
+            { id: 'c3', sourceNodeId: 'filter-nd1', targetNodeId: 'transform-nd1' },
+            { id: 'c4', sourceNodeId: 'transform-nd1', targetNodeId: 'whatsapp-nd1' }
+          ]
+        }
       }
     ];
 
     setTemplates(mockTemplates);
+
   };
 
   const categories = ['all', ...Array.from(new Set(templates.map(t => t.category)))];
