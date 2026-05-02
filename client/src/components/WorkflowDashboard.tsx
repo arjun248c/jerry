@@ -54,6 +54,18 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
   const checkServerAndLoad = async () => {
     setLoading(true);
     setError(null);
+
+    // In production (no local backend), skip the ping and go straight to local mode
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      setServerOnline(null); // null = hide all banners
+      const local = loadLocalWorkflows();
+      setWorkflows(local);
+      setExecutions([]);
+      setLoading(false);
+      return;
+    }
+
     const online = await apiUtils.ping();
     setServerOnline(online);
 
@@ -210,16 +222,19 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
     );
   }
 
+  // Only show server banners in development
+  const isDev = process.env.NODE_ENV !== 'production';
+
   return (
     <div className="workflow-dashboard">
-      {/* Server status banner */}
-      {serverOnline === false && (
+      {/* Server status banners — dev only */}
+      {isDev && serverOnline === false && (
         <div className="server-banner offline">
           <span>⚠️ <strong>Server Offline</strong> — Working in local mode. Start the backend with <code>npm run dev</code> to sync workflows.</span>
           <button className="retry-btn" onClick={checkServerAndLoad}>🔄 Retry</button>
         </div>
       )}
-      {serverOnline === true && (
+      {isDev && serverOnline === true && (
         <div className="server-banner online">
           ✅ <strong>Server Connected</strong> — All changes are saved to the database.
         </div>
@@ -241,7 +256,6 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
               className="btn-secondary"
               onClick={() => setShowTemplates(true)}
               title="Browse ready-made workflow templates"
-              disabled={!serverOnline}
             >
               📋 Templates
             </button>
