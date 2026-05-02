@@ -6,6 +6,70 @@
   min-height: 100vh;
 }
 
+/* Server Status Banners */
+.server-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+  border-radius: var(--border-radius);
+  margin-bottom: 20px;
+  font-size: 14px;
+  border: 1px solid transparent;
+}
+
+.server-banner.offline {
+  background: rgba(220, 53, 69, 0.1);
+  border-color: var(--danger-color);
+  color: var(--danger-color);
+}
+
+.server-banner.online {
+  background: rgba(40, 167, 69, 0.1);
+  border-color: var(--success-color);
+  color: var(--success-color);
+}
+
+.server-banner code {
+  background: rgba(0,0,0,0.2);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.retry-btn {
+  background: var(--danger-color);
+  color: white;
+  border: none;
+  padding: 5px 14px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.retry-btn:hover {
+  background: color-mix(in srgb, var(--danger-color) 80%, black);
+}
+
+/* Error Banner */
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-radius: var(--border-radius);
+  margin-bottom: 20px;
+  font-size: 14px;
+  background: rgba(220, 53, 69, 0.08);
+  border: 1px solid var(--danger-color);
+  color: var(--danger-color);
+}
+
 .dashboard-loading {
   display: flex;
   flex-direction: column;

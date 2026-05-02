@@ -1,11 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { Workflow, ExecutionData, SearchFilters } from '../types';
-import { api } from '../services/api';
+import { api, apiUtils } from '../services/api';
 import './WorkflowDashboard.css';
 
 interface WorkflowDashboardProps {
   onOpenWorkflow: (workflow: Workflow) => void;
   onCreateWorkflow: () => void;
+}
+
+// ─── Local-storage helpers ───────────────────────────────────────────────────
+const LS_WORKFLOWS_KEY = 'jerry_local_workflows';
+
+function loadLocalWorkflows(): Workflow[] {
+  try {
+    const raw = localStorage.getItem(LS_WORKFLOWS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalWorkflows(workflows: Workflow[]) {
+  try {
+    localStorage.setItem(LS_WORKFLOWS_KEY, JSON.stringify(workflows));
+  } catch {}
 }
 
 export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
@@ -19,6 +37,8 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
   const [importingTemplate, setImportingTemplate] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [serverOnline, setServerOnline] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [filters, setFilters] = useState<SearchFilters>({
     query: '',
@@ -27,22 +47,50 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
   });
 
   useEffect(() => {
-    loadData();
-    loadTemplates();
+    checkServerAndLoad();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const checkServerAndLoad = async () => {
+    setLoading(true);
+    setError(null);
+    const online = await apiUtils.ping();
+    setServerOnline(online);
+
+    if (online) {
+      await loadData();
+      loadTemplates();
+    } else {
+      // Fall back to locally cached workflows
+      const local = loadLocalWorkflows();
+      setWorkflows(local);
+      setExecutions([]);
+      setLoading(false);
+    }
+  };
 
   const loadData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const [workflowsData, executionsData] = await Promise.all([
         api.getWorkflows(),
         api.getExecutions()
       ]);
       setWorkflows(workflowsData);
-      const execArr = Array.isArray(executionsData) ? executionsData : (executionsData as any).data ?? [];
+      // Persist locally so offline mode works next time
+      saveLocalWorkflows(workflowsData);
+      const execArr = Array.isArray(executionsData)
+        ? executionsData
+        : (executionsData as any).data ?? [];
       setExecutions(execArr);
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
+    } catch (err: any) {
+      const msg = apiUtils.formatError(err);
+      setError(msg);
+      // Still show cached workflows
+      const local = loadLocalWorkflows();
+      setWorkflows(local);
+      setExecutions([]);
     } finally {
       setLoading(false);
     }
@@ -52,8 +100,8 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
     try {
       const tmpl = await api.getTemplates();
       setTemplates(tmpl);
-    } catch (error) {
-      console.error('Failed to load templates:', error);
+    } catch {
+      // templates are optional — silently ignore
     }
   };
 
@@ -63,10 +111,10 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
     try {
       await api.importTemplate(filename);
       setImportSuccess(`"${templateName}" imported! Find it in your workflows list.`);
-      loadData();
+      await loadData();
       setTimeout(() => setImportSuccess(null), 5000);
-    } catch (error) {
-      console.error('Failed to import template:', error);
+    } catch (err: any) {
+      setError(`Failed to import template: ${apiUtils.formatError(err)}`);
     } finally {
       setImportingTemplate(null);
     }
@@ -87,7 +135,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
     const successCount = workflowExecutions.filter(e => e.status === 'success').length;
     const totalCount = workflowExecutions.length;
     const successRate = totalCount > 0 ? (successCount / totalCount) * 100 : 0;
-    
+
     return {
       totalExecutions: totalCount,
       successRate: Math.round(successRate),
@@ -96,40 +144,60 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
   };
 
   const duplicateWorkflow = async (workflow: Workflow) => {
-    try {
-      const newWorkflow: Partial<Workflow> = {
-        ...workflow,
-        id: undefined,
-        name: `${workflow.name} (Copy)`,
-        active: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      await api.saveWorkflow(newWorkflow as Workflow);
-      loadData();
-    } catch (error) {
-      console.error('Failed to duplicate workflow:', error);
+    const newWorkflow: Workflow = {
+      ...workflow,
+      id: `workflow_${Date.now()}`,
+      name: `${workflow.name} (Copy)`,
+      active: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    if (serverOnline) {
+      try {
+        await api.saveWorkflow(newWorkflow);
+        await loadData();
+      } catch (err: any) {
+        setError(`Failed to duplicate workflow: ${apiUtils.formatError(err)}`);
+      }
+    } else {
+      // Offline: save locally
+      const updated = [...workflows, newWorkflow];
+      setWorkflows(updated);
+      saveLocalWorkflows(updated);
     }
   };
 
   const deleteWorkflow = async (workflowId: string) => {
     if (!window.confirm('Are you sure you want to delete this workflow?')) return;
-    
-    try {
-      await api.deleteWorkflow(workflowId);
-      loadData();
-    } catch (error) {
-      console.error('Failed to delete workflow:', error);
+
+    if (serverOnline) {
+      try {
+        await api.deleteWorkflow(workflowId);
+        await loadData();
+      } catch (err: any) {
+        setError(`Failed to delete workflow: ${apiUtils.formatError(err)}`);
+      }
+    } else {
+      const updated = workflows.filter(w => w.id !== workflowId);
+      setWorkflows(updated);
+      saveLocalWorkflows(updated);
     }
   };
 
   const toggleWorkflowStatus = async (workflow: Workflow) => {
-    try {
-      const updated = { ...workflow, active: !workflow.active };
-      await api.saveWorkflow(updated);
-      loadData();
-    } catch (error) {
-      console.error('Failed to update workflow status:', error);
+    const updated = { ...workflow, active: !workflow.active };
+    if (serverOnline) {
+      try {
+        await api.saveWorkflow(updated);
+        await loadData();
+      } catch (err: any) {
+        setError(`Failed to update workflow: ${apiUtils.formatError(err)}`);
+      }
+    } else {
+      const updatedList = workflows.map(w => w.id === workflow.id ? updated : w);
+      setWorkflows(updatedList);
+      saveLocalWorkflows(updatedList);
     }
   };
 
@@ -137,13 +205,34 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
     return (
       <div className="dashboard-loading">
         <div className="loading-spinner"></div>
-        <p>Loading dashboard...</p>
+        <p>Connecting to server...</p>
       </div>
     );
   }
 
   return (
     <div className="workflow-dashboard">
+      {/* Server status banner */}
+      {serverOnline === false && (
+        <div className="server-banner offline">
+          <span>⚠️ <strong>Server Offline</strong> — Working in local mode. Start the backend with <code>npm run dev</code> to sync workflows.</span>
+          <button className="retry-btn" onClick={checkServerAndLoad}>🔄 Retry</button>
+        </div>
+      )}
+      {serverOnline === true && (
+        <div className="server-banner online">
+          ✅ <strong>Server Connected</strong> — All changes are saved to the database.
+        </div>
+      )}
+
+      {/* Error message */}
+      {error && (
+        <div className="error-banner">
+          ❌ {error}
+          <button onClick={() => setError(null)} style={{ marginLeft: 12, background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontWeight: 700 }}>✕</button>
+        </div>
+      )}
+
       <div className="dashboard-header">
         <div className="header-content">
           <h1>Workflow Dashboard</h1>
@@ -152,6 +241,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
               className="btn-secondary"
               onClick={() => setShowTemplates(true)}
               title="Browse ready-made workflow templates"
+              disabled={!serverOnline}
             >
               📋 Templates
             </button>
@@ -160,7 +250,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
             </button>
           </div>
         </div>
-        
+
         <div className="dashboard-stats">
           <div className="stat-card">
             <div className="stat-value">{workflows.length}</div>
@@ -176,7 +266,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
           </div>
           <div className="stat-card">
             <div className="stat-value">
-              {executions.length > 0 
+              {executions.length > 0
                 ? Math.round((executions.filter(e => e.status === 'success').length / executions.length) * 100)
                 : 0}%
             </div>
@@ -195,7 +285,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
             className="search-input"
           />
         </div>
-        
+
         <div className="filter-group">
           <select
             value={filters.status}
@@ -207,7 +297,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
             <option value="false">Inactive</option>
           </select>
         </div>
-        
+
         <div className="view-toggle">
           <button
             className={`view-btn ${view === 'grid' ? 'active' : ''}`}
@@ -227,7 +317,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
       <div className={`workflows-container ${view}`}>
         {filteredWorkflows.map(workflow => {
           const stats = getWorkflowStats(workflow.id);
-          
+
           return (
             <div key={workflow.id} className="workflow-card">
               <div className="card-header">
@@ -241,7 +331,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
                   </span>
                 </div>
               </div>
-              
+
               <div className="card-stats">
                 <div className="stat-item">
                   <span className="stat-number">{workflow.nodes.length}</span>
@@ -256,7 +346,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
                   <span className="stat-text">Success Rate</span>
                 </div>
               </div>
-              
+
               <div className="card-meta">
                 <div className="workflow-tags">
                   {workflow.tags?.map(tag => (
@@ -267,7 +357,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
                   <small>Updated: {new Date(workflow.updatedAt).toLocaleDateString()}</small>
                 </div>
               </div>
-              
+
               <div className="card-actions">
                 <button
                   className="btn-secondary"
@@ -297,7 +387,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
             </div>
           );
         })}
-        
+
         {filteredWorkflows.length === 0 && (
           <div className="empty-state">
             <div className="empty-icon">📋</div>
@@ -305,11 +395,13 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
             <p>Create your first workflow or import a ready-made template</p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button className="btn-primary" onClick={onCreateWorkflow}>
-                Create Workflow
+                ➕ Create Workflow
               </button>
-              <button className="btn-secondary" onClick={() => setShowTemplates(true)}>
-                📋 Browse Templates
-              </button>
+              {serverOnline && (
+                <button className="btn-secondary" onClick={() => setShowTemplates(true)}>
+                  📋 Browse Templates
+                </button>
+              )}
             </div>
           </div>
         )}

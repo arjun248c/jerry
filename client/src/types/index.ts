@@ -159,6 +159,7 @@ export interface PaginatedResponse<T> {
   total: number;
   page: number;
   pageSize: number;
+  hasMore?: boolean;
 }
 
 export interface ApiResponse<T> {

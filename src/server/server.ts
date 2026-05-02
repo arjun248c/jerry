@@ -14,7 +14,9 @@ const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: process.env.NODE_ENV === 'production'
+    ? (process.env.CORS_ORIGIN || 'http://localhost:3000')
+    : true,   // allow all origins in development
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -33,7 +35,14 @@ wss.on('connection', (ws) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'healthy',
+    version: '1.0.0',
+    uptime: process.uptime(),
+    database: true,
+    websocket: true,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Get all workflows

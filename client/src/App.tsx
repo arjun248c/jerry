@@ -105,11 +105,22 @@ function App() {
 
   const handleSaveWorkflow = async (workflow: Workflow) => {
     try {
+      // Always save to localStorage immediately as a backup
+      const localKey = `jerry_wf_${workflow.id}`;
+      localStorage.setItem(localKey, JSON.stringify(workflow));
+      
       await api.saveWorkflow(workflow);
       setCurrentWorkflow(workflow);
       showNotification('Workflow saved successfully!', 'success');
     } catch (error: any) {
-      showNotification(`Failed to save workflow: ${error.message}`, 'error');
+      const isNetworkErr = error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED' || !error.response;
+      if (isNetworkErr) {
+        // Save was already written to localStorage above — just notify
+        setCurrentWorkflow(workflow);
+        showNotification('Saved locally (server offline — start the backend to sync)', 'warning');
+      } else {
+        showNotification(`Failed to save workflow: ${error.message}`, 'error');
+      }
     }
   };
 

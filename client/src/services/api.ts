@@ -18,7 +18,7 @@ const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:3001/api';
 // Create axios instance with default config
 const axiosInstance = axios.create({
   baseURL: API_BASE,
-  timeout: 30000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -41,13 +41,320 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access
       localStorage.removeItem('auth_token');
-      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
+
+// ─── Static fallback node types (used when server is unavailable) ───────────
+export const FALLBACK_NODE_TYPES: NodeType[] = [
+  {
+    name: 'start',
+    displayName: 'Start',
+    description: 'Starting point of the workflow',
+    group: 'Flow Control',
+    inputs: [],
+    outputs: ['main'],
+    parameters: [],
+    icon: '▶️',
+    color: '#28a745'
+  },
+  {
+    name: 'httpRequest',
+    displayName: 'HTTP Request',
+    description: 'Make HTTP requests to external APIs',
+    group: 'Network',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'url', displayName: 'URL', type: 'string', required: true, placeholder: 'https://api.example.com' },
+      { name: 'method', displayName: 'Method', type: 'options', required: true, default: 'GET', options: [
+        { name: 'GET', value: 'GET' }, { name: 'POST', value: 'POST' },
+        { name: 'PUT', value: 'PUT' }, { name: 'DELETE', value: 'DELETE' },
+        { name: 'PATCH', value: 'PATCH' }
+      ]},
+      { name: 'body', displayName: 'Request Body', type: 'json', required: false, placeholder: '{}' },
+      { name: 'headers', displayName: 'Headers', type: 'json', required: false, placeholder: '{}' }
+    ],
+    icon: '🌐',
+    color: '#007bff'
+  },
+  {
+    name: 'webhook',
+    displayName: 'Webhook',
+    description: 'Receive data via HTTP webhook',
+    group: 'Triggers',
+    inputs: [],
+    outputs: ['main'],
+    parameters: [
+      { name: 'path', displayName: 'Webhook Path', type: 'string', required: true, placeholder: '/my-webhook' }
+    ],
+    icon: '🔗',
+    color: '#6f42c1'
+  },
+  {
+    name: 'schedule',
+    displayName: 'Schedule',
+    description: 'Trigger workflow on a schedule',
+    group: 'Triggers',
+    inputs: [],
+    outputs: ['main'],
+    parameters: [
+      { name: 'cron', displayName: 'Cron Expression', type: 'string', required: true, placeholder: '0 9 * * 1-5', description: 'e.g. "0 9 * * 1-5" for weekdays at 9am' }
+    ],
+    icon: '⏰',
+    color: '#fd7e14'
+  },
+  {
+    name: 'if',
+    displayName: 'IF Condition',
+    description: 'Branch workflow based on a condition',
+    group: 'Flow Control',
+    inputs: ['main'],
+    outputs: ['true', 'false'],
+    parameters: [
+      { name: 'condition', displayName: 'Condition', type: 'code', required: true, placeholder: 'data.value > 10' }
+    ],
+    icon: '🔀',
+    color: '#ffc107'
+  },
+  {
+    name: 'set',
+    displayName: 'Set Variable',
+    description: 'Set or transform data variables',
+    group: 'Data',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'values', displayName: 'Values', type: 'json', required: true, placeholder: '{"key": "value"}' }
+    ],
+    icon: '📝',
+    color: '#17a2b8'
+  },
+  {
+    name: 'code',
+    displayName: 'Code',
+    description: 'Execute custom JavaScript code',
+    group: 'Data',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'code', displayName: 'JavaScript Code', type: 'code', required: true, placeholder: '// return { result: data }' }
+    ],
+    icon: '💻',
+    color: '#343a40'
+  },
+  {
+    name: 'delay',
+    displayName: 'Delay',
+    description: 'Wait for a specified amount of time',
+    group: 'Flow Control',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'duration', displayName: 'Duration (ms)', type: 'number', required: true, default: 1000 }
+    ],
+    icon: '⏳',
+    color: '#6c757d'
+  },
+  {
+    name: 'email',
+    displayName: 'Send Email',
+    description: 'Send emails via SMTP',
+    group: 'Communication',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'to', displayName: 'To', type: 'string', required: true, placeholder: 'recipient@example.com' },
+      { name: 'subject', displayName: 'Subject', type: 'string', required: true },
+      { name: 'body', displayName: 'Body', type: 'string', required: true }
+    ],
+    icon: '📧',
+    color: '#dc3545'
+  },
+  {
+    name: 'gmail',
+    displayName: 'Send Gmail',
+    description: 'Send emails via Gmail API',
+    group: 'Communication',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'to', displayName: 'To', type: 'string', required: true },
+      { name: 'subject', displayName: 'Subject', type: 'string', required: true },
+      { name: 'body', displayName: 'Body', type: 'string', required: true },
+      { name: 'appPassword', displayName: 'Gmail App Password', type: 'string', required: true }
+    ],
+    icon: '📬',
+    color: '#ea4335'
+  },
+  {
+    name: 'gmailReader',
+    displayName: 'Read Gmail',
+    description: 'Read emails from Gmail inbox',
+    group: 'Communication',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'user', displayName: 'Gmail Address', type: 'string', required: true },
+      { name: 'appPassword', displayName: 'App Password', type: 'string', required: true },
+      { name: 'limit', displayName: 'Max Emails', type: 'number', required: false, default: 10 }
+    ],
+    icon: '📥',
+    color: '#fbbc04'
+  },
+  {
+    name: 'whatsapp',
+    displayName: 'WhatsApp',
+    description: 'Send WhatsApp messages via Cloud API',
+    group: 'Communication',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'to', displayName: 'Phone Number', type: 'string', required: true, placeholder: '+1234567890' },
+      { name: 'message', displayName: 'Message', type: 'string', required: true },
+      { name: 'accessToken', displayName: 'Access Token', type: 'string', required: true },
+      { name: 'phoneNumberId', displayName: 'Phone Number ID', type: 'string', required: true }
+    ],
+    icon: '💬',
+    color: '#25D366'
+  },
+  {
+    name: 'ai',
+    displayName: 'AI / GPT',
+    description: 'Send prompts to OpenAI GPT models',
+    group: 'AI',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'prompt', displayName: 'Prompt', type: 'string', required: true },
+      { name: 'model', displayName: 'Model', type: 'options', required: false, default: 'gpt-3.5-turbo', options: [
+        { name: 'GPT-4o', value: 'gpt-4o' },
+        { name: 'GPT-4', value: 'gpt-4' },
+        { name: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo' }
+      ]},
+      { name: 'apiKey', displayName: 'OpenAI API Key', type: 'string', required: true }
+    ],
+    icon: '🤖',
+    color: '#10a37f'
+  },
+  {
+    name: 'database',
+    displayName: 'Database Query',
+    description: 'Execute SQL database queries',
+    group: 'Data',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'query', displayName: 'SQL Query', type: 'code', required: true, placeholder: 'SELECT * FROM users' },
+      { name: 'connectionString', displayName: 'Connection String', type: 'string', required: true }
+    ],
+    icon: '🗄️',
+    color: '#6610f2'
+  },
+  {
+    name: 'transform',
+    displayName: 'Transform Data',
+    description: 'Map and reshape data objects',
+    group: 'Data',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'mapping', displayName: 'Field Mapping', type: 'json', required: true, placeholder: '{"newKey": "{{oldKey}}"}' }
+    ],
+    icon: '🔄',
+    color: '#20c997'
+  },
+  {
+    name: 'filter',
+    displayName: 'Filter',
+    description: 'Filter items from an array',
+    group: 'Data',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'condition', displayName: 'Filter Condition', type: 'code', required: true, placeholder: 'item.status === "active"' }
+    ],
+    icon: '🔍',
+    color: '#0dcaf0'
+  },
+  {
+    name: 'split',
+    displayName: 'Split',
+    description: 'Split data array into individual items',
+    group: 'Data',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'field', displayName: 'Array Field', type: 'string', required: false, placeholder: 'items' }
+    ],
+    icon: '✂️',
+    color: '#adb5bd'
+  },
+  {
+    name: 'loop',
+    displayName: 'Loop',
+    description: 'Iterate over array items',
+    group: 'Flow Control',
+    inputs: ['main'],
+    outputs: ['item', 'done'],
+    parameters: [
+      { name: 'arrayField', displayName: 'Array Field', type: 'string', required: true }
+    ],
+    icon: '🔁',
+    color: '#e83e8c'
+  },
+  {
+    name: 'file',
+    displayName: 'File Operations',
+    description: 'Read or write files',
+    group: 'Data',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'operation', displayName: 'Operation', type: 'options', required: true, default: 'read', options: [
+        { name: 'Read', value: 'read' }, { name: 'Write', value: 'write' }
+      ]},
+      { name: 'path', displayName: 'File Path', type: 'string', required: true }
+    ],
+    icon: '📁',
+    color: '#fd7e14'
+  },
+  {
+    name: 'youtube',
+    displayName: 'YouTube',
+    description: 'Interact with YouTube Data API',
+    group: 'Social Media',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'operation', displayName: 'Operation', type: 'options', required: true, default: 'search', options: [
+        { name: 'Search Videos', value: 'search' },
+        { name: 'Get Video Details', value: 'getVideo' },
+        { name: 'Get Channel Info', value: 'getChannel' }
+      ]},
+      { name: 'apiKey', displayName: 'YouTube API Key', type: 'string', required: true },
+      { name: 'query', displayName: 'Search Query', type: 'string', required: false }
+    ],
+    icon: '▶️',
+    color: '#ff0000'
+  },
+  {
+    name: 'cache',
+    displayName: 'Cache',
+    description: 'Cache data for reuse',
+    group: 'Data',
+    inputs: ['main'],
+    outputs: ['main'],
+    parameters: [
+      { name: 'key', displayName: 'Cache Key', type: 'string', required: true },
+      { name: 'ttl', displayName: 'TTL (seconds)', type: 'number', required: false, default: 300 }
+    ],
+    icon: '💾',
+    color: '#6c757d'
+  }
+];
 
 export const api = {
   // Workflow Management
@@ -68,8 +375,6 @@ export const api = {
   },
 
   async saveWorkflow(workflow: Workflow): Promise<Workflow> {
-    // Use PUT to update existing saved workflows (those with UUID IDs from the DB).
-    // Use POST for brand new temp-ID workflows (e.g. those starting with 'workflow_').
     if (workflow.id && !workflow.id.startsWith('workflow_')) {
       const response = await axiosInstance.put(`/workflows/${workflow.id}`, workflow);
       return response.data;
@@ -115,15 +420,13 @@ export const api = {
     }
     
     const response = await axiosInstance.get(`/executions?${params}`);
-    // Backend returns a plain array — wrap it into PaginatedResponse shape
     const items: ExecutionData[] = Array.isArray(response.data) ? response.data : response.data?.data || [];
     return {
       data: items,
       total: items.length,
       page: 1,
-      limit: 50,
-      hasMore: false
-    } as unknown as PaginatedResponse<ExecutionData>;
+      pageSize: 50
+    } as PaginatedResponse<ExecutionData>;
   },
 
   async getExecution(executionId: string): Promise<ExecutionData> {
@@ -136,10 +439,18 @@ export const api = {
     return response.data;
   },
 
-  // Node Types
+  // Node Types — returns fallback list when server is unreachable
   async getNodeTypes(): Promise<NodeType[]> {
-    const response = await axiosInstance.get('/node-types');
-    return response.data;
+    try {
+      const response = await axiosInstance.get('/node-types');
+      const data: NodeType[] = response.data;
+      // If backend returns empty array, still use fallback
+      if (!Array.isArray(data) || data.length === 0) return FALLBACK_NODE_TYPES;
+      return data;
+    } catch {
+      console.warn('[Jerry] Backend unavailable — using built-in node types');
+      return FALLBACK_NODE_TYPES;
+    }
   },
 
   async getNodeType(nodeTypeName: string): Promise<NodeType> {
@@ -330,7 +641,7 @@ export const apiUtils = {
   
   async ping(): Promise<boolean> {
     try {
-      await api.checkHealth();
+      await axiosInstance.get('/health', { timeout: 3000 });
       return true;
     } catch {
       return false;
@@ -338,8 +649,14 @@ export const apiUtils = {
   },
   
   formatError: (error: any): string => {
+    if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
+      return 'Cannot connect to server. Please make sure the backend is running on port 3001.';
+    }
     if (error.response?.data?.message) {
       return error.response.data.message;
+    }
+    if (error.response?.data?.error) {
+      return error.response.data.error;
     }
     if (error.message) {
       return error.message;

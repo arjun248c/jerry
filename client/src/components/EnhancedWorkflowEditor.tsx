@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { WorkflowNode, WorkflowConnection, Workflow, NodeType, AppSettings } from '../types';
-import { api } from '../services/api';
+import { api, FALLBACK_NODE_TYPES } from '../services/api';
 import './WorkflowEditor.css';
 
 interface ExecutionUpdate {
@@ -207,12 +207,16 @@ export const EnhancedWorkflowEditor: React.FC<WorkflowEditorProps> = ({ workflow
   };
   
   const loadNodeTypes = async () => {
+    // Always start with fallback so nodes are immediately visible
+    setNodeTypes(FALLBACK_NODE_TYPES);
     try {
       const types = await api.getNodeTypes();
-      setNodeTypes(types);
+      if (types && types.length > 0) {
+        setNodeTypes(types);
+      }
     } catch (error) {
-      console.error('Failed to load node types:', error);
-      addLog('Failed to load node types', 'error');
+      console.warn('Using built-in node types (server unavailable)');
+      addLog('Using built-in node types (server offline)', 'warning');
     }
   };
   
