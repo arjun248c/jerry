@@ -5,7 +5,8 @@
   "installCommand": "npm install",
   "framework": null,
   "env": {
-    "CI": "false"
+    "CI": "false",
+    "REACT_APP_API_BASE": "https://jerry-backend.onrender.com/api"
   },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }

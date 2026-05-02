@@ -9,14 +9,24 @@ import { nodeRegistry } from '../nodes';
 import { Workflow } from '../types';
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? (process.env.CORS_ORIGIN || 'http://localhost:3000')
-    : true,   // allow all origins in development
+  origin: (origin, callback) => {
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true); // Allow all in dev
+    }
+    const allowed = (process.env.CORS_ORIGIN || '')
+      .split(',')
+      .map(o => o.trim())
+      .filter(Boolean);
+    if (!origin || allowed.includes(origin) || allowed.includes('*')) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked: ${origin}`));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
