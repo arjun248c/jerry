@@ -63,6 +63,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
       setWorkflows(local);
       setExecutions([]);
       setLoading(false);
+      loadTemplates(); // ← load static templates even in production
       return;
     }
 
@@ -78,6 +79,7 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
       setWorkflows(local);
       setExecutions([]);
       setLoading(false);
+      loadTemplates(); // ← load static templates even when backend is offline
     }
   };
 
@@ -110,8 +112,22 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
 
   const loadTemplates = async () => {
     try {
-      const tmpl = await api.getTemplates();
-      setTemplates(tmpl);
+      // Always load templates from static files bundled in /public/templates/
+      // This works both locally and on Vercel without needing the backend.
+      const templateFiles = [
+        'gmail-to-whatsapp.json',
+        'whatsapp-to-gmail.json',
+        'whatsapp-vip-broadcast.json'
+      ];
+      const results = await Promise.all(
+        templateFiles.map(async (file) => {
+          const res = await fetch(`${process.env.PUBLIC_URL || ''}/templates/${file}`);
+          if (!res.ok) return null;
+          const json = await res.json();
+          return { filename: file, name: json.name, description: json.description, tags: json.tags, workflow: json.workflow };
+        })
+      );
+      setTemplates(results.filter(Boolean));
     } catch {
       // templates are optional — silently ignore
     }
@@ -121,12 +137,26 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
     setImportingTemplate(filename);
     setImportSuccess(null);
     try {
-      await api.importTemplate(filename);
+      // Fetch the template JSON directly from static public files
+      const res = await fetch(`${process.env.PUBLIC_URL || ''}/templates/${filename}`);
+      if (!res.ok) throw new Error(`Could not load template: ${filename}`);
+      const json = await res.json();
+      const wf = json.workflow;
+      const newWorkflow: any = {
+        ...wf,
+        id: `workflow_${Date.now()}`,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      // Save to local storage (production-safe)
+      const existing = loadLocalWorkflows();
+      const updated = [...existing, newWorkflow];
+      saveLocalWorkflows(updated);
+      setWorkflows(updated);
       setImportSuccess(`"${templateName}" imported! Find it in your workflows list.`);
-      await loadData();
       setTimeout(() => setImportSuccess(null), 5000);
     } catch (err: any) {
-      setError(`Failed to import template: ${apiUtils.formatError(err)}`);
+      setError(`Failed to import template: ${err.message || 'Unknown error'}`);
     } finally {
       setImportingTemplate(null);
     }

@@ -1,0 +1,104 @@
+{
+  "name": "Gmail → WhatsApp: Forward New Emails as WhatsApp Messages",
+  "description": "Polls your Gmail inbox every 5 minutes for unread emails and sends them as WhatsApp messages. Great for getting email alerts on WhatsApp.",
+  "category": "Communication",
+  "tags": ["gmail", "whatsapp", "automation"],
+  "workflow": {
+    "name": "Gmail → WhatsApp: Forward Emails as Messages",
+    "description": "Polls Gmail for new emails and forwards them as WhatsApp messages",
+    "active": false,
+    "nodes": [
+      {
+        "id": "node_schedule_1",
+        "type": "schedule",
+        "name": "Poll Every 5 Minutes",
+        "position": { "x": 100, "y": 200 },
+        "parameters": {
+          "cron": "*/5 * * * *",
+          "timezone": "Asia/Kolkata",
+          "enabled": true
+        }
+      },
+      {
+        "id": "node_gmail_reader_1",
+        "type": "gmailReader",
+        "name": "Read New Gmail Emails",
+        "position": { "x": 360, "y": 200 },
+        "parameters": {
+          "gmailUser": "arjunchavan248@gmail.com",
+          "appPassword": "xwip djgn lwbn fjcs",
+          "folder": "INBOX",
+          "filter": "UNSEEN",
+          "maxEmails": 5,
+          "markAsRead": true,
+          "includeBody": true
+        }
+      },
+      {
+        "id": "node_if_1",
+        "type": "if",
+        "name": "Has New Emails?",
+        "position": { "x": 620, "y": 200 },
+        "parameters": {
+          "condition": "data.emailCount > 0"
+        }
+      },
+      {
+        "id": "node_loop_1",
+        "type": "loop",
+        "name": "Loop Through Emails",
+        "position": { "x": 880, "y": 160 },
+        "parameters": {
+          "items": "emails",
+          "batchSize": 1,
+          "parallel": false,
+          "maxIterations": 10
+        }
+      },
+      {
+        "id": "node_whatsapp_1",
+        "type": "whatsapp",
+        "name": "Send WhatsApp Message",
+        "position": { "x": 1140, "y": 160 },
+        "parameters": {
+          "to": "+919607284278",
+          "messageType": "text",
+          "message": "📧 *New Email Notification*\n\n*From:* {{item.fromName}} <{{item.from}}>\n*Subject:* {{item.subject}}\n*Date:* {{item.date}}\n\n*Message Preview:*\n{{item.body}}\n\n——\n_Automated alert by Jerry Workflows_",
+          "phoneNumberId": "1218533888008347",
+          "accessToken": "EAAMky63lzjgBRTG8Dtc0mZA950VavnpJpzo131ENYmpgTDIeDVPBhDXuEuKNI7ayyTlnFb7ZCvPS4TMRait9qrvgrNdBQopKohZBKm6kILwbtwVzWyvZCgNo9VpYBjqcAzpLzb7BnoGZCP21FCjYUKCZCceOvoZCKgEEej1SZClIUThcCqHXhRwZCADGaS3K1MUbDHfpjM3KhZBKYvT1GZCG0ncv2ukZBQr14tJxgDzZCxC29"
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn_1",
+        "sourceNodeId": "node_schedule_1",
+        "targetNodeId": "node_gmail_reader_1"
+      },
+      {
+        "id": "conn_2",
+        "sourceNodeId": "node_gmail_reader_1",
+        "targetNodeId": "node_if_1"
+      },
+      {
+        "id": "conn_3",
+        "sourceNodeId": "node_if_1",
+        "targetNodeId": "node_loop_1",
+        "condition": "true"
+      },
+      {
+        "id": "conn_4",
+        "sourceNodeId": "node_loop_1",
+        "targetNodeId": "node_whatsapp_1"
+      }
+    ],
+    "tags": ["gmail", "whatsapp"],
+    "settings": {
+      "timeout": 60000,
+      "retryCount": 2,
+      "parallelExecution": false,
+      "errorHandling": "continue",
+      "notifications": []
+    }
+  }
+}

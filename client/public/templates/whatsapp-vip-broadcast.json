@@ -1,0 +1,68 @@
+{
+  "name": "WhatsApp VIP Broadcast: Send Alerts to Priority Contacts",
+  "description": "Sends a professional WhatsApp message to your VIP contacts instantly. Ideal for urgent announcements, priority updates, or exclusive notifications to your most important recipients.",
+  "category": "Communication",
+  "tags": ["whatsapp", "vip", "broadcast", "automation"],
+  "workflow": {
+    "name": "WhatsApp VIP Broadcast",
+    "description": "Broadcasts a professional message to all VIP contacts via WhatsApp",
+    "active": false,
+    "nodes": [
+      {
+        "id": "node_trigger_1",
+        "type": "manualTrigger",
+        "name": "Manual Trigger",
+        "position": { "x": 100, "y": 250 },
+        "parameters": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "node_whatsapp_vip1",
+        "type": "whatsapp",
+        "name": "Send to VIP Person 1",
+        "position": { "x": 400, "y": 150 },
+        "parameters": {
+          "to": "+917028940389",
+          "messageType": "text",
+          "message": "🌟 *Priority Notification*\n\nDear Valued Contact,\n\nWe have an important update for you. You are receiving this message as a priority contact.\n\nPlease reach out if you have any questions or need further assistance.\n\nThank you for your continued trust.\n\n——\n_Jerry Workflows | Automated Alert System_",
+          "phoneNumberId": "1218533888008347",
+          "accessToken": "EAAMky63lzjgBRTG8Dtc0mZA950VavnpJpzo131ENYmpgTDIeDVPBhDXuEuKNI7ayyTlnFb7ZCvPS4TMRait9qrvgrNdBQopKohZBKm6kILwbtwVzWyvZCgNo9VpYBjqcAzpLzb7BnoGZCP21FCjYUKCZCceOvoZCKgEEej1SZClIUThcCqHXhRwZCADGaS3K1MUbDHfpjM3KhZBKYvT1GZCG0ncv2ukZBQr14tJxgDzZCxC29"
+        }
+      },
+      {
+        "id": "node_whatsapp_vip2",
+        "type": "whatsapp",
+        "name": "Send to VIP Person 2",
+        "position": { "x": 400, "y": 350 },
+        "parameters": {
+          "to": "+919356812193",
+          "messageType": "text",
+          "message": "🌟 *Priority Notification*\n\nDear Valued Contact,\n\nWe have an important update for you. You are receiving this message as a priority contact.\n\nPlease reach out if you have any questions or need further assistance.\n\nThank you for your continued trust.\n\n——\n_Jerry Workflows | Automated Alert System_",
+          "phoneNumberId": "1218533888008347",
+          "accessToken": "EAAMky63lzjgBRTG8Dtc0mZA950VavnpJpzo131ENYmpgTDIeDVPBhDXuEuKNI7ayyTlnFb7ZCvPS4TMRait9qrvgrNdBQopKohZBKm6kILwbtwVzWyvZCgNo9VpYBjqcAzpLzb7BnoGZCP21FCjYUKCZCceOvoZCKgEEej1SZClIUThcCqHXhRwZCADGaS3K1MUbDHfpjM3KhZBKYvT1GZCG0ncv2ukZBQr14tJxgDzZCxC29"
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn_1",
+        "sourceNodeId": "node_trigger_1",
+        "targetNodeId": "node_whatsapp_vip1"
+      },
+      {
+        "id": "conn_2",
+        "sourceNodeId": "node_trigger_1",
+        "targetNodeId": "node_whatsapp_vip2"
+      }
+    ],
+    "tags": ["whatsapp", "vip", "broadcast"],
+    "settings": {
+      "timeout": 30000,
+      "retryCount": 3,
+      "parallelExecution": true,
+      "errorHandling": "continue",
+      "notifications": []
+    }
+  }
+}

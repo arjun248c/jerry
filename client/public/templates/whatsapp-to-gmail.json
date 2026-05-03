@@ -1,0 +1,70 @@
+{
+  "name": "WhatsApp → Gmail: Forward WhatsApp Messages to Email",
+  "description": "When a WhatsApp message arrives via webhook, automatically send it as a Gmail email. Perfect for keeping a record of all incoming WhatsApp messages.",
+  "category": "Communication",
+  "tags": ["whatsapp", "gmail", "automation"],
+  "workflow": {
+    "name": "WhatsApp → Gmail: Forward Messages to Email",
+    "description": "Receives WhatsApp messages via webhook and forwards them as Gmail emails",
+    "active": false,
+    "nodes": [
+      {
+        "id": "node_webhook_1",
+        "type": "webhook",
+        "name": "Receive WhatsApp Message",
+        "position": { "x": 100, "y": 200 },
+        "parameters": {
+          "path": "/whatsapp-incoming",
+          "method": "POST",
+          "authType": "none",
+          "responseMode": "immediate"
+        }
+      },
+      {
+        "id": "node_transform_1",
+        "type": "transform",
+        "name": "Extract Message Data",
+        "position": { "x": 360, "y": 200 },
+        "parameters": {
+          "mappings": "[{\"source\": \"body.entry[0].changes[0].value.messages[0].text.body\", \"target\": \"messageText\"}, {\"source\": \"body.entry[0].changes[0].value.messages[0].from\", \"target\": \"senderPhone\"}, {\"source\": \"body.entry[0].changes[0].value.messages[0].timestamp\", \"target\": \"receivedAt\"}]",
+          "conditions": "[]",
+          "removeUnmapped": false
+        }
+      },
+      {
+        "id": "node_gmail_1",
+        "type": "gmail",
+        "name": "Send Gmail Notification",
+        "position": { "x": 620, "y": 200 },
+        "parameters": {
+          "to": "arjunchavan248@gmail.com",
+          "subject": "📱 New WhatsApp Message from {{senderPhone}}",
+          "body": "Hello,\n\nYou have received a new WhatsApp message via Jerry Workflows.\n\n──────────────────────────\n📱 Sender: {{senderPhone}}\n💬 Message: {{messageText}}\n🕐 Received At: {{receivedAt}}\n──────────────────────────\n\nThis is an automated notification. Please do not reply to this email.\n\nBest regards,\nJerry Workflows Automation System",
+          "isHtml": false,
+          "gmailUser": "arjunchavan248@gmail.com",
+          "appPassword": "xwip djgn lwbn fjcs"
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn_1",
+        "sourceNodeId": "node_webhook_1",
+        "targetNodeId": "node_transform_1"
+      },
+      {
+        "id": "conn_2",
+        "sourceNodeId": "node_transform_1",
+        "targetNodeId": "node_gmail_1"
+      }
+    ],
+    "tags": ["whatsapp", "gmail"],
+    "settings": {
+      "timeout": 30000,
+      "retryCount": 2,
+      "parallelExecution": false,
+      "errorHandling": "stop",
+      "notifications": []
+    }
+  }
+}
