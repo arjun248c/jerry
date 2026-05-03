@@ -37,12 +37,12 @@
         "name": "Send Gmail Notification",
         "position": { "x": 620, "y": 200 },
         "parameters": {
-          "to": "YOUR_EMAIL@gmail.com",
-          "subject": "New WhatsApp Message from {{senderPhone}}",
-          "body": "You received a new WhatsApp message:\n\nFrom: {{senderPhone}}\nMessage: {{messageText}}\nReceived at: {{receivedAt}}\n\n-- Sent by Jerry Workflows",
+          "to": "arjunchavan248@gmail.com",
+          "subject": "📱 New WhatsApp Message from {{senderPhone}}",
+          "body": "Hello,\n\nYou have received a new WhatsApp message via Jerry Workflows.\n\n──────────────────────────\n📱 Sender: {{senderPhone}}\n💬 Message: {{messageText}}\n🕐 Received At: {{receivedAt}}\n──────────────────────────\n\nThis is an automated notification. Please do not reply to this email.\n\nBest regards,\nJerry Workflows Automation System",
           "isHtml": false,
-          "gmailUser": "YOUR_GMAIL@gmail.com",
-          "appPassword": "YOUR_APP_PASSWORD"
+          "gmailUser": "arjunchavan248@gmail.com",
+          "appPassword": "xwip djgn lwbn fjcs"
         }
       }
     ],

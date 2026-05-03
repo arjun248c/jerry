@@ -15,7 +15,7 @@
         "position": { "x": 100, "y": 200 },
         "parameters": {
           "cron": "*/5 * * * *",
-          "timezone": "UTC",
+          "timezone": "Asia/Kolkata",
           "enabled": true
         }
       },
@@ -25,8 +25,8 @@
         "name": "Read New Gmail Emails",
         "position": { "x": 360, "y": 200 },
         "parameters": {
-          "gmailUser": "YOUR_GMAIL@gmail.com",
-          "appPassword": "YOUR_APP_PASSWORD",
+          "gmailUser": "arjunchavan248@gmail.com",
+          "appPassword": "xwip djgn lwbn fjcs",
           "folder": "INBOX",
           "filter": "UNSEEN",
           "maxEmails": 5,
@@ -61,11 +61,11 @@
         "name": "Send WhatsApp Message",
         "position": { "x": 1140, "y": 160 },
         "parameters": {
-          "to": "+1234567890",
+          "to": "+919607284278",
           "messageType": "text",
-          "message": "📧 New Email!\nFrom: {{item.fromName}} <{{item.from}}>\nSubject: {{item.subject}}\nDate: {{item.date}}\n\n{{item.body}}",
-          "phoneNumberId": "YOUR_PHONE_NUMBER_ID",
-          "accessToken": "YOUR_WHATSAPP_ACCESS_TOKEN"
+          "message": "📧 *New Email Notification*\n\n*From:* {{item.fromName}} <{{item.from}}>\n*Subject:* {{item.subject}}\n*Date:* {{item.date}}\n\n*Message Preview:*\n{{item.body}}\n\n——\n_Automated alert by Jerry Workflows_",
+          "phoneNumberId": "1218533888008347",
+          "accessToken": "EAAMky63lzjgBRTG8Dtc0mZA950VavnpJpzo131ENYmpgTDIeDVPBhDXuEuKNI7ayyTlnFb7ZCvPS4TMRait9qrvgrNdBQopKohZBKm6kILwbtwVzWyvZCgNo9VpYBjqcAzpLzb7BnoGZCP21FCjYUKCZCceOvoZCKgEEej1SZClIUThcCqHXhRwZCADGaS3K1MUbDHfpjM3KhZBKYvT1GZCG0ncv2ukZBQr14tJxgDzZCxC29"
         }
       }
     ],
