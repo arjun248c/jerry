@@ -6,7 +6,7 @@
   "framework": null,
   "env": {
     "CI": "false",
-    "REACT_APP_API_BASE": "https://jerry-backend.onrender.com/api"
+    "REACT_APP_API_BASE": "https://jerry-adox.onrender.com/api"
   },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
