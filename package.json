@@ -2,7 +2,7 @@
   "name": "workflow-automation",
   "version": "1.0.0",
   "description": "A workflow automation platform similar to n8n",
-  "main": "dist/server.js",
+  "main": "dist/server/server.js",
   "scripts": {
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "nodemon --exec ts-node src/server/server.ts",

@@ -49,14 +49,27 @@ export class WorkflowEngine {
         execution: { ...execution, data: {} }
       });
 
-      // Find start node
-      const startNode = workflow.nodes.find(node => node.type === 'start');
-      if (!startNode) {
-        throw new Error('No start node found in workflow');
+      // Find start nodes
+      let startNodes: WorkflowNode[] = [];
+      if (triggerData.nodeId) {
+        const explicitStartNode = workflow.nodes.find(n => n.id === triggerData.nodeId);
+        if (explicitStartNode) startNodes.push(explicitStartNode);
+      }
+      
+      if (startNodes.length === 0) {
+        const hasIncoming = new Set(workflow.connections.map(c => c.targetNodeId));
+        startNodes = workflow.nodes.filter(n => !hasIncoming.has(n.id));
       }
 
-      // Execute workflow starting from start node
-      const result = await this.executeNode(startNode, triggerData, workflow, new Set(), [], execution.id);
+      if (startNodes.length === 0) {
+        throw new Error('No start nodes found in workflow');
+      }
+
+      // Execute workflow starting from all start nodes
+      let result = triggerData;
+      for (const startNode of startNodes) {
+        result = await this.executeNode(startNode, triggerData, workflow, new Set(), [], execution.id);
+      }
       
       execution.status = 'success';
       execution.finishedAt = new Date();

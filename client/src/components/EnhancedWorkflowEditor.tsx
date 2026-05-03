@@ -509,72 +509,44 @@ export const EnhancedWorkflowEditor: React.FC<WorkflowEditorProps> = ({ workflow
     addLog('Workflow saved', 'success');
   }, [workflow, nodes, connections, onSave]);
   
+  // ── Execution via Backend API ─────────────────────────────────────────────
   const executeWorkflow = async () => {
     if (nodes.length === 0) {
       addLog('No nodes to execute. Add some nodes first.', 'warning');
       return;
     }
 
+    if (!workflow.id || workflow.id.startsWith('node_') || workflow.id.startsWith('new_')) {
+      addLog('Please save the workflow first before executing.', 'warning');
+      saveWorkflow();
+      return;
+    }
+
     setExecutionStatus('Running');
     setExecutionLogs([]);
     setNodeExecutionData(new Map());
-    addLog('Starting workflow execution (local mode)...', 'info');
+    addLog('🚀 Triggering workflow execution on server...', 'info');
 
-    // Build execution order: start from nodes with no incoming connections
-    const hasIncoming = new Set(connections.map(c => c.targetNodeId));
-    const startNodes = nodes.filter(n => !hasIncoming.has(n.id));
-    const visited = new Set<string>();
-    const queue = startNodes.length > 0 ? [...startNodes] : [nodes[0]];
-
-    // BFS traversal to simulate execution
     try {
-      while (queue.length > 0) {
-        const node = queue.shift()!;
-        if (visited.has(node.id)) continue;
-        visited.add(node.id);
+      // Save current state first to ensure backend runs the latest changes
+      const updatedWorkflow: Workflow = {
+        ...workflow,
+        nodes,
+        connections,
+        updatedAt: new Date(),
+        version: (workflow.version || 0) + 1
+      };
+      await api.saveWorkflow(updatedWorkflow);
 
-        // Mark node as executing
-        setExecutingNodes(prev => new Set([...prev, node.id]));
-        addLog(`Executing: ${node.name} (${node.type})`, 'info');
-
-        // Simulate processing time (300–800ms per node)
-        await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
-
-        // Generate mock output data for this node
-        const mockOutput = {
-          nodeId: node.id,
-          nodeType: node.type,
-          executedAt: new Date().toISOString(),
-          status: 'success',
-          output: { result: `Output from ${node.name}`, data: node.parameters }
-        };
-
-        // Mark node as done
-        setExecutingNodes(prev => {
-          const next = new Set(prev);
-          next.delete(node.id);
-          return next;
-        });
-        setNodeExecutionData(prev => new Map(prev.set(node.id, mockOutput)));
-        addLog(`✓ Completed: ${node.name}`, 'success');
-
-        // Queue next connected nodes
-        const nextNodeIds = connections
-          .filter(c => c.sourceNodeId === node.id)
-          .map(c => c.targetNodeId);
-        for (const nextId of nextNodeIds) {
-          const nextNode = nodes.find(n => n.id === nextId);
-          if (nextNode && !visited.has(nextId)) queue.push(nextNode);
-        }
-      }
-
-      setExecutionStatus('Completed');
-      addLog(`✅ Workflow completed — ${visited.size} node(s) executed`, 'success');
-      showNotification('Workflow executed successfully', 'success');
+      // Execute on backend
+      await api.executeWorkflow(updatedWorkflow.id);
+      addLog('Execution request sent to server.', 'info');
+      
+      // The WebSocket will handle the rest of the updates
     } catch (error: any) {
       setExecutionStatus('Error');
-      addLog(`Execution error: ${error.message}`, 'error');
-      showNotification('Workflow execution failed', 'error');
+      addLog(`Execution trigger failed: ${error.message}`, 'error');
+      showNotification('Workflow execution failed to start', 'error');
     }
   };
   

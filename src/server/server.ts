@@ -7,6 +7,7 @@ import { Database } from '../database/database';
 import { WorkflowEngine } from './WorkflowEngine';
 import { nodeRegistry } from '../nodes';
 import { Workflow } from '../types';
+import { Scheduler } from './Scheduler';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -34,6 +35,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const db = new Database();
 const engine = new WorkflowEngine(db, wss);
+const scheduler = new Scheduler(db, engine);
 
 // WebSocket connection handling
 wss.on('connection', (ws) => {
@@ -87,6 +89,7 @@ app.post('/api/workflows', async (req, res) => {
     };
 
     await db.saveWorkflow(workflow);
+    await scheduler.reloadSchedules();
     res.json(workflow);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -115,6 +118,7 @@ app.put('/api/workflows/:id', async (req, res) => {
     };
 
     await db.saveWorkflow(workflow);
+    await scheduler.reloadSchedules();
     res.json(workflow);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -168,6 +172,7 @@ app.get('/api/executions', async (req, res) => {
 app.delete('/api/workflows/:id', async (req, res) => {
   try {
     await db.deleteWorkflow(req.params.id);
+    await scheduler.reloadSchedules();
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -262,13 +267,15 @@ app.post('/api/templates/:filename/import', async (req, res) => {
       }
     };
     await db.saveWorkflow(workflow);
+    await scheduler.reloadSchedules();
     res.json({ success: true, workflow });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-server.listen(port, () => {
+server.listen(port, async () => {
+  await scheduler.init();
   console.log(`🚀 Workflow Server running on http://localhost:${port}`);
   console.log(`📊 API Health: http://localhost:${port}/api/health`);
   console.log(`🎯 Frontend should be on http://localhost:3000`);

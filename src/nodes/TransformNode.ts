@@ -139,13 +139,15 @@ export class TransformNode extends BaseNode {
   }
 
   private getNestedValue(obj: any, path: string): any {
-    return path.split('.').reduce((current, key) => {
+    const normalizedPath = path.replace(/\[(\d+)\]/g, '.$1');
+    return normalizedPath.split('.').reduce((current, key) => {
       return current && current[key] !== undefined ? current[key] : undefined;
     }, obj);
   }
 
   private setNestedValue(obj: any, path: string, value: any): void {
-    const keys = path.split('.');
+    const normalizedPath = path.replace(/\[(\d+)\]/g, '.$1');
+    const keys = normalizedPath.split('.');
     const lastKey = keys.pop()!;
     const target = keys.reduce((current, key) => {
       if (!current[key] || typeof current[key] !== 'object') {

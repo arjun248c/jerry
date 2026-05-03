@@ -23,6 +23,8 @@ import { YouTubeNode } from './YouTubeNode';
 
 export const nodeRegistry: Record<string, BaseNode> = {
   start: new StartNode(),
+  manualTrigger: new StartNode(),
+  trigger: new StartNode(),
   httpRequest: new HttpRequestNode(),
   set: new SetNode(),
   if: new IfNode(),
