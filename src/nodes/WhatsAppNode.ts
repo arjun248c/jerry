@@ -68,8 +68,8 @@ export class WhatsAppNode extends BaseNode {
     inputData: Record<string, any>,
     context: Record<string, any>
   ): Promise<Record<string, any>> {
-    const to = this.getParameter(node, 'to');
-    const message = this.getParameter(node, 'message');
+    let to = this.getParameter(node, 'to');
+    let message = this.getParameter(node, 'message');
     const messageType = this.getParameter(node, 'messageType', 'text');
     const phoneNumberId = this.getParameter(node, 'phoneNumberId');
     const accessToken = this.getParameter(node, 'accessToken');
@@ -77,6 +77,22 @@ export class WhatsAppNode extends BaseNode {
     if (!to || !message) {
       throw new Error('To and Message are required for WhatsApp node');
     }
+
+    // Interpolate placeholders like {{item.sender}} or {{notes}}
+    const interpolate = (str: string) => {
+      return str.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
+        const path = key.trim().replace(/^item\./, '').split('.');
+        let current = inputData;
+        for (const p of path) {
+          if (current && typeof current === 'object') current = current[p];
+          else return '';
+        }
+        return current !== undefined ? String(current) : '';
+      });
+    };
+
+    to = interpolate(to);
+    message = interpolate(message);
 
     console.log(`[WhatsApp Node] Sending WhatsApp message:
       To: ${to}

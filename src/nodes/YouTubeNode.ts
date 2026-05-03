@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { YoutubeTranscript } from 'youtube-transcript';
 import { BaseNode } from './BaseNode';
 import { WorkflowNode, NodeType } from '../types';
 
@@ -29,7 +30,8 @@ export class YouTubeNode extends BaseNode {
           { name: 'List Playlists', value: 'listPlaylists' },
           { name: 'Get Playlist Items', value: 'getPlaylistItems' },
           { name: 'Get Video Comments', value: 'getVideoComments' },
-          { name: 'Get Trending Videos', value: 'getTrendingVideos' }
+          { name: 'Get Trending Videos', value: 'getTrendingVideos' },
+          { name: 'Get Transcript', value: 'getTranscript' }
         ]
       },
       {
@@ -144,8 +146,8 @@ export class YouTubeNode extends BaseNode {
     const apiKey = this.getParameter(node, 'apiKey', '');
     const maxResults = Math.min(50, Math.max(1, Number(this.getParameter(node, 'maxResults', 10))));
 
-    if (!apiKey) {
-      throw new Error('YouTube API Key is required');
+    if (!apiKey && operation !== 'getTranscript') {
+      throw new Error('YouTube API Key is required for this operation');
     }
 
     switch (operation) {
@@ -163,6 +165,8 @@ export class YouTubeNode extends BaseNode {
         return await this.getVideoComments(node, inputData, apiKey, maxResults);
       case 'getTrendingVideos':
         return await this.getTrendingVideos(node, inputData, apiKey, maxResults);
+      case 'getTranscript':
+        return await this.getTranscript(node, inputData);
       default:
         throw new Error(`Unsupported YouTube operation: ${operation}`);
     }
@@ -449,6 +453,42 @@ export class YouTubeNode extends BaseNode {
       videos,
       count: videos.length
     };
+  }
+
+  private async getTranscript(
+    node: WorkflowNode,
+    inputData: Record<string, any>
+  ): Promise<Record<string, any>> {
+    let videoIdOrUrl = this.getParameter(node, 'videoId', '');
+    
+    // Basic interpolation for {{videoId}} or {{item.videoId}}
+    if (videoIdOrUrl.includes('{{') && videoIdOrUrl.includes('}}')) {
+      videoIdOrUrl = videoIdOrUrl.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
+        const path = key.replace(/^item\./, '').split('.');
+        let current = inputData;
+        for (const p of path) {
+          if (current && typeof current === 'object') current = current[p];
+          else return '';
+        }
+        return current || '';
+      });
+    }
+
+    if (!videoIdOrUrl) throw new Error('Video ID or URL is required for Get Transcript operation');
+
+    try {
+      const transcriptList = await YoutubeTranscript.fetchTranscript(videoIdOrUrl);
+      const fullText = transcriptList.map(t => t.text).join(' ');
+      
+      return {
+        ...inputData,
+        operation: 'getTranscript',
+        transcript: fullText,
+        transcriptLength: fullText.length
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to fetch transcript: ${error.message}`);
+    }
   }
 
   private async callYouTubeAPI(endpoint: string, params: Record<string, any>): Promise<any> {
