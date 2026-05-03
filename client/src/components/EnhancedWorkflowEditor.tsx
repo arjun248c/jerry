@@ -125,13 +125,11 @@ export const EnhancedWorkflowEditor: React.FC<WorkflowEditorProps> = ({ workflow
   };
   
   const connectWebSocket = () => {
-    // Only attempt WebSocket in development — no backend in production
-    if (process.env.NODE_ENV !== 'development') {
-      addLog('Running in local mode (no backend)', 'info');
-      return;
-    }
     try {
-      const wsUrl = 'ws://localhost:3001';
+      // Build WS URL from the API base, e.g., https://jerry-adox.onrender.com/api -> wss://jerry-adox.onrender.com
+      const apiBase = process.env.REACT_APP_API_BASE || 'http://localhost:3001/api';
+      const wsUrl = apiBase.replace('/api', '').replace('http://', 'ws://').replace('https://', 'wss://');
+      
       wsRef.current = new WebSocket(wsUrl);
       
       wsRef.current.onopen = () => {
