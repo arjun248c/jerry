@@ -936,74 +936,101 @@ export const EnhancedWorkflowEditor: React.FC<WorkflowEditorProps> = ({ workflow
 
                   <div className="property-group">
                     <div className="property-group-title">Parameters</div>
-                    {nodeTypes
-                      .find(t => t.name === selectedNode.type)
-                      ?.parameters.map(param => (
-                        <div key={param.name} className="property">
-                          <label>{param.displayName}:</label>
-                          {param.description && (
-                            <div className="property-description">{param.description}</div>
-                          )}
-                          {param.type === 'options' ? (
-                            <select
-                              value={selectedNode.parameters[param.name] || param.default}
-                              onChange={(e) => {
-                                const updatedNodes = nodes.map(node =>
-                                  node.id === selectedNode.id
-                                    ? { ...node, parameters: { ...node.parameters, [param.name]: e.target.value } }
-                                    : node
-                                );
-                                setNodes(updatedNodes);
-                                setSelectedNode({
-                                  ...selectedNode,
-                                  parameters: { ...selectedNode.parameters, [param.name]: e.target.value }
-                                });
-                              }}
-                            >
-                              {param.options?.map(option => (
-                                <option key={option.value} value={option.value}>
-                                  {option.name}
-                                </option>
+                    {(() => {
+                      // Get schema-defined param names for this node type
+                      const schemaParams = nodeTypes.find(t => t.name === selectedNode.type)?.parameters || [];
+                      const schemaParamNames = new Set(schemaParams.map(p => p.name));
+                      // Get extra params stored on the node but not in the schema (e.g. from imported templates)
+                      const extraParamKeys = Object.keys(selectedNode.parameters).filter(k => !schemaParamNames.has(k));
+                      return (
+                        <>
+                          {/* Schema-defined params with proper labels */}
+                          {schemaParams.map(param => (
+                            <div key={param.name} className="property">
+                              <label>{param.displayName}:</label>
+                              {param.description && (
+                                <div className="property-description">{param.description}</div>
+                              )}
+                              {param.type === 'options' ? (
+                                <select
+                                  value={selectedNode.parameters[param.name] || param.default}
+                                  onChange={(e) => {
+                                    const updatedNodes = nodes.map(node =>
+                                      node.id === selectedNode.id
+                                        ? { ...node, parameters: { ...node.parameters, [param.name]: e.target.value } }
+                                        : node
+                                    );
+                                    setNodes(updatedNodes);
+                                    setSelectedNode({ ...selectedNode, parameters: { ...selectedNode.parameters, [param.name]: e.target.value } });
+                                  }}
+                                >
+                                  {param.options?.map(option => (
+                                    <option key={option.value} value={option.value}>{option.name}</option>
+                                  ))}
+                                </select>
+                              ) : param.type === 'boolean' ? (
+                                <input
+                                  type="checkbox"
+                                  checked={selectedNode.parameters[param.name] || param.default || false}
+                                  onChange={(e) => {
+                                    const updatedNodes = nodes.map(node =>
+                                      node.id === selectedNode.id
+                                        ? { ...node, parameters: { ...node.parameters, [param.name]: e.target.checked } }
+                                        : node
+                                    );
+                                    setNodes(updatedNodes);
+                                    setSelectedNode({ ...selectedNode, parameters: { ...selectedNode.parameters, [param.name]: e.target.checked } });
+                                  }}
+                                />
+                              ) : (
+                                <textarea
+                                  rows={param.type === 'code' || param.type === 'json' ? 6 : 2}
+                                  value={selectedNode.parameters[param.name] ?? param.default ?? ''}
+                                  onChange={(e) => {
+                                    const updatedNodes = nodes.map(node =>
+                                      node.id === selectedNode.id
+                                        ? { ...node, parameters: { ...node.parameters, [param.name]: e.target.value } }
+                                        : node
+                                    );
+                                    setNodes(updatedNodes);
+                                    setSelectedNode({ ...selectedNode, parameters: { ...selectedNode.parameters, [param.name]: e.target.value } });
+                                  }}
+                                  placeholder={param.placeholder || String(param.default || '')}
+                                />
+                              )}
+                            </div>
+                          ))}
+                          {/* Extra params from imported templates (not in schema) */}
+                          {extraParamKeys.length > 0 && (
+                            <div className="property-group" style={{ marginTop: 8 }}>
+                              <div className="property-group-title" style={{ fontSize: '0.7rem', opacity: 0.7 }}>
+                                Imported Values
+                              </div>
+                              {extraParamKeys.map(key => (
+                                <div key={key} className="property">
+                                  <label style={{ textTransform: 'none', fontWeight: 500 }}>
+                                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}:
+                                  </label>
+                                  <textarea
+                                    rows={typeof selectedNode.parameters[key] === 'string' && selectedNode.parameters[key].length > 60 ? 3 : 2}
+                                    value={String(selectedNode.parameters[key] ?? '')}
+                                    onChange={(e) => {
+                                      const updatedNodes = nodes.map(node =>
+                                        node.id === selectedNode.id
+                                          ? { ...node, parameters: { ...node.parameters, [key]: e.target.value } }
+                                          : node
+                                      );
+                                      setNodes(updatedNodes);
+                                      setSelectedNode({ ...selectedNode, parameters: { ...selectedNode.parameters, [key]: e.target.value } });
+                                    }}
+                                  />
+                                </div>
                               ))}
-                            </select>
-                          ) : param.type === 'boolean' ? (
-                            <input
-                              type="checkbox"
-                              checked={selectedNode.parameters[param.name] || param.default || false}
-                              onChange={(e) => {
-                                const updatedNodes = nodes.map(node =>
-                                  node.id === selectedNode.id
-                                    ? { ...node, parameters: { ...node.parameters, [param.name]: e.target.checked } }
-                                    : node
-                                );
-                                setNodes(updatedNodes);
-                                setSelectedNode({
-                                  ...selectedNode,
-                                  parameters: { ...selectedNode.parameters, [param.name]: e.target.checked }
-                                });
-                              }}
-                            />
-                          ) : (
-                            <textarea
-                              rows={param.type === 'code' || param.type === 'json' ? 6 : 2}
-                              value={selectedNode.parameters[param.name] || param.default || ''}
-                              onChange={(e) => {
-                                const updatedNodes = nodes.map(node =>
-                                  node.id === selectedNode.id
-                                    ? { ...node, parameters: { ...node.parameters, [param.name]: e.target.value } }
-                                    : node
-                                );
-                                setNodes(updatedNodes);
-                                setSelectedNode({
-                                  ...selectedNode,
-                                  parameters: { ...selectedNode.parameters, [param.name]: e.target.value }
-                                });
-                              }}
-                              placeholder={param.placeholder || param.default}
-                            />
+                            </div>
                           )}
-                        </div>
-                      ))}
+                        </>
+                      );
+                    })()}
                   </div>
                 </>
               ) : (
