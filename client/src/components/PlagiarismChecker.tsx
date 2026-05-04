@@ -74,7 +74,7 @@ ${text.slice(0, 8000)}
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model: 'gpt-3.5-turbo',
           messages: [
             { role: 'system', content: 'You are a precise plagiarism detection AI. Always respond with valid JSON only.' },
             { role: 'user', content: prompt }
@@ -183,34 +183,54 @@ ${text.slice(0, 8000)}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
           {/* API Key */}
-          <div style={{
-            background: 'var(--surface-color, #f8fafc)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            padding: '20px',
-          }}>
+          <div style={{ background: 'var(--surface-color, #f8fafc)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '20px' }}>
             <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: 'var(--text-color)' }}>
               🔑 OpenAI API Key
             </label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={e => saveApiKey(e.target.value)}
-              placeholder="sk-proj-..."
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                background: 'var(--background-color)',
-                color: 'var(--text-color)',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-              }}
-            />
-            <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--text-muted-color, #9ca3af)' }}>
-              Saved locally in your browser. Never sent to our servers.
-            </p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={e => saveApiKey(e.target.value)}
+                placeholder="sk-proj-..."
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--background-color)',
+                  color: 'var(--text-color)',
+                  fontSize: '14px',
+                }}
+              />
+              <button
+                onClick={() => saveApiKey('')}
+                title="Clear saved key"
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid #fecaca',
+                  background: '#fef2f2',
+                  color: '#dc2626',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                ✕ Clear
+              </button>
+            </div>
+            {apiKey && (
+              <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#22c55e', fontWeight: 600 }}>
+                ✅ Active key ends in: ...{apiKey.slice(-6)}
+              </p>
+            )}
+            {!apiKey && (
+              <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#f59e0b', fontWeight: 600 }}>
+                ⚠️ No key saved — paste your OpenAI key above
+              </p>
+            )}
           </div>
 
           {/* File Upload */}
