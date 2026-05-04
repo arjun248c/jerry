@@ -80,7 +80,7 @@ export class WhatsAppNode extends BaseNode {
 
     // Interpolate placeholders like {{item.sender}} or {{notes}}
     const interpolate = (str: string) => {
-      return str.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
+      return str.replace(/\{\{([^}]+)\}\}/g, (_: string, key: string) => {
         const path = key.trim().replace(/^item\./, '').split('.');
         let current = inputData;
         for (const p of path) {

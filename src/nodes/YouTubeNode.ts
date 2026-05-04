@@ -463,7 +463,7 @@ export class YouTubeNode extends BaseNode {
     
     // Basic interpolation for {{videoId}} or {{item.videoId}}
     if (videoIdOrUrl.includes('{{') && videoIdOrUrl.includes('}}')) {
-      videoIdOrUrl = videoIdOrUrl.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
+      videoIdOrUrl = videoIdOrUrl.replace(/\{\{([^}]+)\}\}/g, (_: string, key: string) => {
         const path = key.replace(/^item\./, '').split('.');
         let current = inputData;
         for (const p of path) {
