@@ -212,6 +212,11 @@ function App() {
               {currentWorkflow?.description && (
                 <p className="nav-subtitle">{currentWorkflow.description}</p>
               )}
+              {currentWorkflow && (
+                <p className="nav-subtitle" style={{ opacity: 0.7, fontSize: '0.75rem', marginTop: '4px', userSelect: 'all' }}>
+                  ID: {currentWorkflow.id}
+                </p>
+              )}
             </div>
             
             <div className="nav-actions">

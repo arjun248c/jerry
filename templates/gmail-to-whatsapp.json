@@ -65,7 +65,7 @@
           "messageType": "text",
           "message": "📧 *New Email Notification*\n\n*From:* {{item.fromName}} <{{item.from}}>\n*Subject:* {{item.subject}}\n*Date:* {{item.date}}\n\n*Message Preview:*\n{{item.body}}\n\n——\n_Automated alert by Jerry Workflows_",
           "phoneNumberId": "1218533888008347",
-          "accessToken": "EAAMky63lzjgBRTG8Dtc0mZA950VavnpJpzo131ENYmpgTDIeDVPBhDXuEuKNI7ayyTlnFb7ZCvPS4TMRait9qrvgrNdBQopKohZBKm6kILwbtwVzWyvZCgNo9VpYBjqcAzpLzb7BnoGZCP21FCjYUKCZCceOvoZCKgEEej1SZClIUThcCqHXhRwZCADGaS3K1MUbDHfpjM3KhZBKYvT1GZCG0ncv2ukZBQr14tJxgDzZCxC29"
+          "accessToken": "EAAMky63lzjgBRf7dK8ZCq4ZAkwa6oBYFeKZByhFZC4fTneoEMJIKV5Hw2b3nmV944LOZCYw8AgY3qyRUezZAu0krRxHWJ9p4laxEa7yEoAWZCzgpremqanzPKt1aZB2tBIaom8dVVgIlBs74DQHUUkHVLdJV3LDw6Uto4lJjFbMAYoZCGUAeuOUJypeZCoZCfphJ8i6wGfxuOtLBOkNotUrAIqsF6YmqevEnlV59m31ayL47hg7qPfJOuneAfpk1mDokAl6aZCfQiMhjh1OgLBrsH3JjeG3T"
         }
       }
     ],
