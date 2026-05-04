@@ -19,7 +19,7 @@ const PROVIDERS = {
     badge: '🆓 Free',
     badgeColor: '#22c55e',
     url: 'https://api.groq.com/openai/v1/chat/completions',
-    model: 'llama3-8b-8192',
+    model: 'llama-3.1-8b-instant',
     placeholder: 'gsk_...',
     signupUrl: 'https://console.groq.com/keys',
     signupLabel: 'Get free key at console.groq.com →',
