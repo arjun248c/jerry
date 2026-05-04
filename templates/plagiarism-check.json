@@ -1,0 +1,43 @@
+{
+  "name": "Plagiarism Check (AI)",
+  "description": "Upload a document to check for plagiarism and originality using AI.",
+  "tags": ["AI", "Writing", "Education"],
+  "workflow": {
+    "name": "Plagiarism Check (AI)",
+    "description": "Analyzes uploaded text for plagiarism, provides an originality score, and identifies suspicious passages.",
+    "active": false,
+    "nodes": [
+      {
+        "id": "node_trigger_1",
+        "type": "webhook",
+        "name": "Manual/Upload Trigger",
+        "position": { "x": 100, "y": 200 },
+        "parameters": {
+          "path": "/plagiarism",
+          "method": "POST"
+        }
+      },
+      {
+        "id": "node_ai_1",
+        "type": "ai",
+        "name": "Analyze Content",
+        "position": { "x": 400, "y": 200 },
+        "parameters": {
+          "provider": "openai",
+          "model": "gpt-4o",
+          "apiKey": "",
+          "systemPrompt": "You are an advanced academic integrity assistant and plagiarism detector. Your goal is to analyze text for originality, identify potential sources of matching content (if possible), and evaluate the overall integrity of the writing.",
+          "prompt": "Please perform a comprehensive plagiarism check on the following document. \n\n1. Provide an overall 'Originality Score' (0-100%).\n2. Highlight any passages that seem suspicious or unoriginal.\n3. List common phrases or clichés found.\n4. Suggest ways to improve the citations or rewrite flagged sections.\n\nDOCUMENT CONTENT:\n{{fileContent}}",
+          "outputField": "plagiarismReport"
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn_1",
+        "sourceNodeId": "node_trigger_1",
+        "targetNodeId": "node_ai_1"
+      }
+    ]
+  }
+}

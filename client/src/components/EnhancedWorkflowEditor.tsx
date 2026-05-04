@@ -67,6 +67,7 @@ export const EnhancedWorkflowEditor: React.FC<WorkflowEditorProps> = ({ workflow
   // Refs
   const wsRef = useRef<WebSocket | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const autoSaveRef = useRef<NodeJS.Timeout | undefined>(undefined);
   // Node dragging refs (avoid state re-renders during drag for perf)
   const draggingNodeId = useRef<string | null>(null);
@@ -548,6 +549,39 @@ export const EnhancedWorkflowEditor: React.FC<WorkflowEditorProps> = ({ workflow
     }
   };
   
+  const handleExecuteWithFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !workflow) return;
+
+    try {
+      setExecutionStatus('Running');
+      addLog(`Reading file: ${file.name}...`, 'info');
+      
+      const text = await file.text();
+      
+      // Auto-save before execution
+      const updatedWorkflow: Workflow = {
+        ...workflow,
+        nodes,
+        connections,
+        updatedAt: new Date(),
+        version: (workflow.version || 0) + 1
+      };
+      await api.saveWorkflow(updatedWorkflow);
+
+      // Execute on backend with file content
+      await api.executeWorkflow(updatedWorkflow.id, { fileContent: text });
+      addLog(`File uploaded. Execution request sent to server.`, 'info');
+      
+      // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (error: any) {
+      setExecutionStatus('Error');
+      addLog(`File upload failed: ${error.message}`, 'error');
+      showNotification('Workflow execution failed to start', 'error');
+    }
+  };
+  
   // Filter nodes based on search
   const filteredNodeTypes = nodeTypes.filter(nodeType =>
     nodeType.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -578,6 +612,22 @@ export const EnhancedWorkflowEditor: React.FC<WorkflowEditorProps> = ({ workflow
           >
             ▶️ Execute
           </button>
+          
+          <button 
+            onClick={() => fileInputRef.current?.click()} 
+            disabled={executionStatus === 'Running'}
+            className="btn-secondary"
+            title="Upload file and run workflow"
+          >
+            📁 Upload & Run
+          </button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            style={{ display: 'none' }} 
+            onChange={handleExecuteWithFile} 
+            accept=".txt,.md,.json,.js,.ts,.html,.css,.csv"
+          />
         </div>
         
         <div className="toolbar-divider" />

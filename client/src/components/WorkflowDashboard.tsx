@@ -118,7 +118,8 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
         'gmail-to-whatsapp.json',
         'whatsapp-to-gmail.json',
         'whatsapp-vip-broadcast.json',
-        'whatsapp-youtube-notes.json'
+        'whatsapp-youtube-notes.json',
+        'plagiarism-check.json'
       ];
       const results = await Promise.all(
         templateFiles.map(async (file) => {
