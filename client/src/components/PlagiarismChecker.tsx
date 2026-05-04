@@ -66,11 +66,57 @@ export const PlagiarismChecker: React.FC<PlagiarismCheckerProps> = ({ onBack }) 
     localStorage.setItem(`jerry_plag_key_${provider}`, key);
   };
 
+  const extractPdfText = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if ((window as any).pdfjsLib) {
+        processPdf(file, resolve, reject);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload = () => processPdf(file, resolve, reject);
+      script.onerror = () => reject(new Error('Failed to load PDF.js'));
+      document.head.appendChild(script);
+    });
+  };
+
+  const processPdf = async (file: File, resolve: (v: string) => void, reject: (e: Error) => void) => {
+    try {
+      const pdfjsLib = (window as any).pdfjsLib;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let extractedText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        extractedText += content.items.map((item: any) => item.str).join(' ') + '\n';
+      }
+      resolve(extractedText);
+    } catch (e: any) {
+      reject(e);
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
-    setText(await file.text());
+    
+    if (file.name.toLowerCase().endsWith('.pdf')) {
+      setLoading(true);
+      setError('');
+      try {
+        const text = await extractPdfText(file);
+        setText(text);
+      } catch (err: any) {
+        setError('Failed to extract text from PDF: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setText(await file.text());
+    }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -198,8 +244,8 @@ ${text.slice(0, 6000)}
             onMouseLeave={e => { e.currentTarget.style.background = 'rgba(167,139,250,0.05)'; e.currentTarget.style.borderColor = '#a78bfa'; }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📁</div>
             <div style={{ fontWeight: 600, color: '#7c3aed', marginBottom: '4px' }}>{fileName ? `✅ ${fileName}` : 'Click to upload a file'}</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted-color, #9ca3af)' }}>Supports .txt, .md, .py, .js, .html, .csv</div>
-            <input ref={fileInputRef} type="file" style={{ display: 'none' }} accept=".txt,.md,.json,.js,.ts,.py,.html,.css,.csv" onChange={handleFileUpload} />
+            <div style={{ fontSize: '12px', color: 'var(--text-muted-color, #9ca3af)' }}>Supports .pdf, .txt, .md, .py, .js, .html, .csv</div>
+            <input ref={fileInputRef} type="file" style={{ display: 'none' }} accept=".pdf,.txt,.md,.json,.js,.ts,.py,.html,.css,.csv" onChange={handleFileUpload} />
           </div>
 
           {/* Text Area */}
