@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { WorkflowDashboard } from './components/WorkflowDashboard';
 import { EnhancedWorkflowEditor } from './components/EnhancedWorkflowEditor';
 import { WorkflowTemplates } from './components/WorkflowTemplates';
+import { PlagiarismChecker } from './components/PlagiarismChecker';
 import { Workflow, WorkflowTemplate, AppSettings } from './types';
 import { api } from './services/api';
 import './App.css';
 
-type AppView = 'dashboard' | 'editor' | 'templates';
+type AppView = 'dashboard' | 'editor' | 'templates' | 'plagiarism';
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
@@ -247,6 +248,7 @@ function App() {
           <WorkflowDashboard
             onOpenWorkflow={handleOpenWorkflow}
             onCreateWorkflow={() => setShowTemplates(true)}
+            onPlagiarismCheck={() => setCurrentView('plagiarism')}
           />
         )}
 
@@ -255,6 +257,10 @@ function App() {
             workflow={currentWorkflow}
             onSave={handleSaveWorkflow}
           />
+        )}
+
+        {currentView === 'plagiarism' && (
+          <PlagiarismChecker onBack={handleBackToDashboard} />
         )}
       </div>
 
@@ -290,6 +296,13 @@ function App() {
               title="From Template (Ctrl+T)"
             >
               📋
+            </button>
+            <button
+              className="quick-action-btn"
+              onClick={() => setCurrentView('plagiarism')}
+              title="Plagiarism Checker"
+            >
+              🔍
             </button>
           </div>
         </div>

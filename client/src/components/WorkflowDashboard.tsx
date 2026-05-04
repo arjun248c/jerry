@@ -6,6 +6,7 @@ import './WorkflowDashboard.css';
 interface WorkflowDashboardProps {
   onOpenWorkflow: (workflow: Workflow) => void;
   onCreateWorkflow: () => void;
+  onPlagiarismCheck?: () => void;
 }
 
 // ─── Local-storage helpers ───────────────────────────────────────────────────
@@ -28,7 +29,8 @@ function saveLocalWorkflows(workflows: Workflow[]) {
 
 export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
   onOpenWorkflow,
-  onCreateWorkflow
+  onCreateWorkflow,
+  onPlagiarismCheck
 }) => {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [executions, setExecutions] = useState<ExecutionData[]>([]);
@@ -291,6 +293,16 @@ export const WorkflowDashboard: React.FC<WorkflowDashboardProps> = ({
             >
               📋 Templates
             </button>
+            {onPlagiarismCheck && (
+              <button
+                className="btn-secondary"
+                onClick={onPlagiarismCheck}
+                title="AI Plagiarism Checker"
+                style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', color: 'white', border: 'none' }}
+              >
+                🔍 Plagiarism Check
+              </button>
+            )}
             <button className="btn-primary" onClick={onCreateWorkflow}>
               ➕ Create Workflow
             </button>
