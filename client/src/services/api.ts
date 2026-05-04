@@ -13,7 +13,8 @@ import {
   ImportResult
 } from '../types';
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:3001/api';
+const API_BASE = process.env.REACT_APP_API_BASE || 
+  (process.env.NODE_ENV === 'development' ? 'http://localhost:3001/api' : 'https://jerry-adox.onrender.com/api');
 
 // Create axios instance with default config
 const axiosInstance = axios.create({
