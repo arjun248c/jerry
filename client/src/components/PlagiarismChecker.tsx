@@ -13,90 +13,112 @@ interface PlagiarismCheckerProps {
   onBack: () => void;
 }
 
+const PROVIDERS = {
+  groq: {
+    label: 'Groq (FREE)',
+    badge: '🆓 Free',
+    badgeColor: '#22c55e',
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    model: 'llama3-8b-8192',
+    placeholder: 'gsk_...',
+    signupUrl: 'https://console.groq.com/keys',
+    signupLabel: 'Get free key at console.groq.com →',
+  },
+  openai: {
+    label: 'OpenAI (Paid)',
+    badge: '💳 Paid',
+    badgeColor: '#f59e0b',
+    url: 'https://api.openai.com/v1/chat/completions',
+    model: 'gpt-3.5-turbo',
+    placeholder: 'sk-proj-...',
+    signupUrl: 'https://platform.openai.com/settings/billing',
+    signupLabel: 'Add billing at platform.openai.com →',
+  },
+};
+
+type ProviderKey = keyof typeof PROVIDERS;
+
 export const PlagiarismChecker: React.FC<PlagiarismCheckerProps> = ({ onBack }) => {
+  const [provider, setProvider] = useState<ProviderKey>(
+    () => (localStorage.getItem('jerry_plag_provider') as ProviderKey) || 'groq'
+  );
+  const [apiKey, setApiKey] = useState(
+    () => localStorage.getItem(`jerry_plag_key_${localStorage.getItem('jerry_plag_provider') || 'groq'}`) || ''
+  );
   const [text, setText] = useState('');
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('jerry_openai_key') || '');
   const [result, setResult] = useState<PlagiarismResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [fileName, setFileName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setFileName(file.name);
-    const content = await file.text();
-    setText(content);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const prov = PROVIDERS[provider];
+
+  const switchProvider = (p: ProviderKey) => {
+    setProvider(p);
+    localStorage.setItem('jerry_plag_provider', p);
+    setApiKey(localStorage.getItem(`jerry_plag_key_${p}`) || '');
+    setError('');
   };
 
   const saveApiKey = (key: string) => {
     setApiKey(key);
-    localStorage.setItem('jerry_openai_key', key);
+    localStorage.setItem(`jerry_plag_key_${provider}`, key);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    setText(await file.text());
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const analyze = async () => {
     if (!text.trim()) { setError('Please paste some text or upload a file first.'); return; }
-    if (!apiKey.trim()) { setError('Please enter your OpenAI API key.'); return; }
-    setError('');
-    setLoading(true);
-    setResult(null);
+    if (!apiKey.trim()) { setError(`Please enter your ${prov.label} API key.`); return; }
+    setError(''); setLoading(true); setResult(null);
 
-    const prompt = `You are an expert plagiarism detection AI. Carefully analyze the following text and return a JSON response with EXACTLY this structure (no extra text, just valid JSON):
-
+    const prompt = `You are an expert plagiarism detection AI. Analyze the following text and return ONLY valid JSON with this structure:
 {
   "originalityScore": <number 0-100>,
-  "summary": "<2-3 sentence summary of originality assessment>",
+  "summary": "<2-3 sentence originality assessment>",
   "suspiciousPassages": ["<passage1>", "<passage2>"],
   "commonPhrases": ["<phrase1>", "<phrase2>"],
   "suggestions": ["<suggestion1>", "<suggestion2>"],
-  "rawReport": "<detailed multi-paragraph analysis>"
+  "rawReport": "<detailed analysis paragraph>"
 }
+Rules: originalityScore 100=original, 0=plagiarized. Max 5 items each list.
 
-Rules:
-- originalityScore: 100 = completely original, 0 = entirely plagiarized
-- suspiciousPassages: list passages that appear copied or highly generic (max 5)
-- commonPhrases: list overused or clichéd phrases (max 5)
-- suggestions: actionable improvements (max 5)
-- rawReport: a full, readable analysis paragraph
-
-TEXT TO ANALYZE:
+TEXT:
 ---
-${text.slice(0, 8000)}
+${text.slice(0, 6000)}
 ---`;
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const res = await fetch(prov.url, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
+          model: prov.model,
           messages: [
-            { role: 'system', content: 'You are a precise plagiarism detection AI. Always respond with valid JSON only.' },
+            { role: 'system', content: 'You are a plagiarism detection AI. Respond with valid JSON only, no markdown.' },
             { role: 'user', content: prompt }
           ],
           temperature: 0.2,
-          max_tokens: 1500,
+          max_tokens: 1200,
         }),
       });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || `API Error ${response.status}`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message || `API Error ${res.status}`);
       }
 
-      const data = await response.json();
-      const rawContent = data.choices?.[0]?.message?.content || '{}';
-      
-      // Extract JSON from markdown if wrapped in ```json ... ```
-      const jsonMatch = rawContent.match(/```json\s*([\s\S]*?)```/) || rawContent.match(/({[\s\S]*})/);
-      const jsonString = jsonMatch ? jsonMatch[1] : rawContent;
-      
-      const parsed: PlagiarismResult = JSON.parse(jsonString.trim());
+      const data = await res.json();
+      const raw = data.choices?.[0]?.message?.content || '{}';
+      const jsonMatch = raw.match(/```json\s*([\s\S]*?)```/) || raw.match(/({[\s\S]*})/);
+      const parsed: PlagiarismResult = JSON.parse((jsonMatch ? jsonMatch[1] : raw).trim());
       setResult(parsed);
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Check your API key and try again.');
@@ -105,403 +127,159 @@ ${text.slice(0, 8000)}
     }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return '#22c55e';
-    if (score >= 50) return '#f59e0b';
-    return '#ef4444';
-  };
-
-  const getScoreLabel = (score: number) => {
-    if (score >= 80) return 'Highly Original';
-    if (score >= 60) return 'Mostly Original';
-    if (score >= 40) return 'Moderately Original';
-    return 'Potentially Plagiarized';
-  };
+  const scoreColor = (s: number) => s >= 80 ? '#22c55e' : s >= 50 ? '#f59e0b' : '#ef4444';
+  const scoreLabel = (s: number) => s >= 80 ? 'Highly Original' : s >= 60 ? 'Mostly Original' : s >= 40 ? 'Moderately Original' : 'Potentially Plagiarized';
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--background-color)',
-      padding: '0',
-      fontFamily: 'var(--font-family)',
-    }}>
+    <div style={{ minHeight: '100vh', background: 'var(--background-color)', fontFamily: 'var(--font-family)' }}>
       {/* Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)',
-        padding: '20px 32px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-      }}>
-        <button
-          onClick={onBack}
-          style={{
-            background: 'rgba(255,255,255,0.15)',
-            border: '1px solid rgba(255,255,255,0.3)',
-            color: 'white',
-            padding: '8px 16px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s',
-          }}
+      <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)', padding: '20px 32px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
+        <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}
           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
-        >
+          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}>
           ← Dashboard
         </button>
         <div style={{ flex: 1 }}>
-          <h1 style={{ color: 'white', margin: 0, fontSize: '1.6rem', fontWeight: 700, letterSpacing: '-0.5px' }}>
-            🔍 AI Plagiarism Checker
-          </h1>
-          <p style={{ color: 'rgba(255,255,255,0.7)', margin: '4px 0 0', fontSize: '14px' }}>
-            Upload or paste content to check originality using GPT-4o
-          </p>
+          <h1 style={{ color: 'white', margin: 0, fontSize: '1.6rem', fontWeight: 700 }}>🔍 AI Plagiarism Checker</h1>
+          <p style={{ color: 'rgba(255,255,255,0.7)', margin: '4px 0 0', fontSize: '14px' }}>Upload or paste content to check originality using AI</p>
         </div>
-        <div style={{
-          background: 'rgba(255,255,255,0.1)',
-          border: '1px solid rgba(255,255,255,0.2)',
-          borderRadius: '8px',
-          padding: '6px 14px',
-          color: 'rgba(255,255,255,0.8)',
-          fontSize: '12px',
-          fontWeight: 600,
-          letterSpacing: '1px',
-          textTransform: 'uppercase',
-        }}>
-          Powered by GPT-4o
+        <div style={{ background: prov.badgeColor + '33', border: `1px solid ${prov.badgeColor}66`, borderRadius: '8px', padding: '6px 14px', color: prov.badgeColor, fontSize: '13px', fontWeight: 700 }}>
+          {prov.badge} {prov.label}
         </div>
       </div>
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-        
-        {/* LEFT COLUMN — Input */}
+
+        {/* LEFT — Input */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-          {/* API Key */}
+          {/* Provider Selector */}
           <div style={{ background: 'var(--surface-color, #f8fafc)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '20px' }}>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: 'var(--text-color)' }}>
-              🔑 OpenAI API Key
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: '12px', fontSize: '14px', color: 'var(--text-color)' }}>
+              🤖 AI Provider
+            </label>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
+              {(Object.keys(PROVIDERS) as ProviderKey[]).map(p => (
+                <button key={p} onClick={() => switchProvider(p)} style={{
+                  flex: 1, padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
+                  border: provider === p ? `2px solid ${PROVIDERS[p].badgeColor}` : '2px solid transparent',
+                  background: provider === p ? PROVIDERS[p].badgeColor + '22' : 'var(--background-color)',
+                  color: provider === p ? PROVIDERS[p].badgeColor : 'var(--text-color)',
+                  transition: 'all 0.2s',
+                }}>
+                  {PROVIDERS[p].badge} {PROVIDERS[p].label}
+                </button>
+              ))}
+            </div>
+            <a href={prov.signupUrl} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: prov.badgeColor, fontWeight: 600, textDecoration: 'none' }}>
+              🔗 {prov.signupLabel}
+            </a>
+
+            <label style={{ display: 'block', fontWeight: 600, margin: '14px 0 8px', fontSize: '14px', color: 'var(--text-color)' }}>
+              🔑 {prov.label} API Key
             </label>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={e => saveApiKey(e.target.value)}
-                placeholder="sk-proj-..."
-                style={{
-                  flex: 1,
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  background: 'var(--background-color)',
-                  color: 'var(--text-color)',
-                  fontSize: '14px',
-                }}
-              />
-              <button
-                onClick={() => saveApiKey('')}
-                title="Clear saved key"
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #fecaca',
-                  background: '#fef2f2',
-                  color: '#dc2626',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
+              <input type="password" value={apiKey} onChange={e => saveApiKey(e.target.value)}
+                placeholder={prov.placeholder}
+                style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--background-color)', color: 'var(--text-color)', fontSize: '14px' }} />
+              <button onClick={() => saveApiKey('')} style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontWeight: 600, fontSize: '13px', whiteSpace: 'nowrap' }}>
                 ✕ Clear
               </button>
             </div>
-            {apiKey && (
-              <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#22c55e', fontWeight: 600 }}>
-                ✅ Active key ends in: ...{apiKey.slice(-6)}
-              </p>
-            )}
-            {!apiKey && (
-              <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#f59e0b', fontWeight: 600 }}>
-                ⚠️ No key saved — paste your OpenAI key above
-              </p>
-            )}
+            {apiKey
+              ? <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#22c55e', fontWeight: 600 }}>✅ Active key ends in: ...{apiKey.slice(-6)}</p>
+              : <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#f59e0b', fontWeight: 600 }}>⚠️ No key — paste your {prov.label} key above</p>
+            }
           </div>
 
           {/* File Upload */}
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              border: '2px dashed #a78bfa',
-              borderRadius: '12px',
-              padding: '28px',
-              textAlign: 'center',
-              cursor: 'pointer',
-              background: 'rgba(167, 139, 250, 0.05)',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(167, 139, 250, 0.12)';
-              e.currentTarget.style.borderColor = '#7c3aed';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(167, 139, 250, 0.05)';
-              e.currentTarget.style.borderColor = '#a78bfa';
-            }}
-          >
+          <div onClick={() => fileInputRef.current?.click()} style={{ border: '2px dashed #a78bfa', borderRadius: '12px', padding: '28px', textAlign: 'center', cursor: 'pointer', background: 'rgba(167,139,250,0.05)', transition: 'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(167,139,250,0.12)'; e.currentTarget.style.borderColor = '#7c3aed'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(167,139,250,0.05)'; e.currentTarget.style.borderColor = '#a78bfa'; }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>📁</div>
-            <div style={{ fontWeight: 600, color: '#7c3aed', marginBottom: '4px' }}>
-              {fileName ? `✅ ${fileName}` : 'Click to upload a file'}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted-color, #9ca3af)' }}>
-              Supports .txt, .md, .docx, .csv, .js, .py, .html
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              style={{ display: 'none' }}
-              accept=".txt,.md,.json,.js,.ts,.py,.html,.css,.csv"
-              onChange={handleFileUpload}
-            />
+            <div style={{ fontWeight: 600, color: '#7c3aed', marginBottom: '4px' }}>{fileName ? `✅ ${fileName}` : 'Click to upload a file'}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted-color, #9ca3af)' }}>Supports .txt, .md, .py, .js, .html, .csv</div>
+            <input ref={fileInputRef} type="file" style={{ display: 'none' }} accept=".txt,.md,.json,.js,.ts,.py,.html,.css,.csv" onChange={handleFileUpload} />
           </div>
 
           {/* Text Area */}
-          <div style={{
-            background: 'var(--surface-color, #f8fafc)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            padding: '20px',
-            flex: 1,
-          }}>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: 'var(--text-color)' }}>
-              📝 Or paste your text directly
-            </label>
-            <textarea
-              value={text}
-              onChange={e => setText(e.target.value)}
-              placeholder="Paste the content you want to check for plagiarism here..."
-              style={{
-                width: '100%',
-                minHeight: '260px',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                background: 'var(--background-color)',
-                color: 'var(--text-color)',
-                fontSize: '14px',
-                lineHeight: '1.6',
-                resize: 'vertical',
-                boxSizing: 'border-box',
-                fontFamily: 'inherit',
-              }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted-color, #9ca3af)' }}>
-                {text.length.toLocaleString()} characters · {text.split(/\s+/).filter(Boolean).length.toLocaleString()} words
-              </span>
-              {text && (
-                <button
-                  onClick={() => { setText(''); setFileName(''); setResult(null); setError(''); }}
-                  style={{
-                    background: 'none', border: 'none', color: '#ef4444',
-                    cursor: 'pointer', fontSize: '12px', padding: '2px 8px',
-                  }}
-                >
-                  ✕ Clear
-                </button>
-              )}
+          <div style={{ background: 'var(--surface-color, #f8fafc)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '20px' }}>
+            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', fontSize: '14px', color: 'var(--text-color)' }}>📝 Or paste your text</label>
+            <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Paste the content you want to check for plagiarism here..."
+              style={{ width: '100%', minHeight: '200px', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--background-color)', color: 'var(--text-color)', fontSize: '14px', lineHeight: '1.6', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted-color, #9ca3af)' }}>{text.length.toLocaleString()} chars · {text.split(/\s+/).filter(Boolean).length.toLocaleString()} words</span>
+              {text && <button onClick={() => { setText(''); setFileName(''); setResult(null); setError(''); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px' }}>✕ Clear</button>}
             </div>
           </div>
 
-          {/* Error */}
-          {error && (
-            <div style={{
-              background: '#fef2f2',
-              border: '1px solid #fecaca',
-              borderRadius: '8px',
-              padding: '12px 16px',
-              color: '#dc2626',
-              fontSize: '14px',
-            }}>
-              ❌ {error}
-            </div>
-          )}
+          {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 16px', color: '#dc2626', fontSize: '14px' }}>❌ {error}</div>}
 
-          {/* Analyze Button */}
-          <button
-            onClick={analyze}
-            disabled={loading}
-            style={{
-              background: loading ? '#a78bfa' : 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '16px 24px',
-              fontSize: '16px',
-              fontWeight: 700,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              boxShadow: loading ? 'none' : '0 4px 15px rgba(124,58,237,0.4)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-            }}
-          >
-            {loading ? (
-              <>
-                <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
-                Analyzing with GPT-4o...
-              </>
-            ) : '🔍 Analyze for Plagiarism'}
+          <button onClick={analyze} disabled={loading} style={{ background: loading ? '#a78bfa' : 'linear-gradient(135deg, #7c3aed, #4f46e5)', color: 'white', border: 'none', borderRadius: '10px', padding: '16px 24px', fontSize: '16px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 4px 15px rgba(124,58,237,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            {loading ? <><span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span> Analyzing...</> : '🔍 Analyze for Plagiarism'}
           </button>
         </div>
 
-        {/* RIGHT COLUMN — Results */}
+        {/* RIGHT — Results */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {!result && !loading && (
-            <div style={{
-              background: 'var(--surface-color, #f8fafc)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '12px',
-              padding: '60px 40px',
-              textAlign: 'center',
-              color: 'var(--text-muted-color, #9ca3af)',
-            }}>
+            <div style={{ background: 'var(--surface-color, #f8fafc)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '60px 40px', textAlign: 'center', color: 'var(--text-muted-color, #9ca3af)' }}>
               <div style={{ fontSize: '4rem', marginBottom: '16px' }}>🛡️</div>
-              <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '8px', color: 'var(--text-color)' }}>
-                Your Results Will Appear Here
-              </div>
-              <div style={{ fontSize: '14px' }}>
-                Upload a file or paste text, add your API key, and click Analyze to get a detailed plagiarism report.
-              </div>
+              <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '8px', color: 'var(--text-color)' }}>Results Will Appear Here</div>
+              <div style={{ fontSize: '14px' }}>Upload a file or paste text, pick a provider, and click Analyze.</div>
             </div>
           )}
 
           {loading && (
-            <div style={{
-              background: 'var(--surface-color, #f8fafc)',
-              border: '1px solid #c4b5fd',
-              borderRadius: '12px',
-              padding: '60px 40px',
-              textAlign: 'center',
-            }}>
+            <div style={{ background: 'var(--surface-color, #f8fafc)', border: '1px solid #c4b5fd', borderRadius: '12px', padding: '60px 40px', textAlign: 'center' }}>
               <div style={{ fontSize: '3rem', marginBottom: '16px', animation: 'pulse 1.5s ease-in-out infinite' }}>🔍</div>
-              <div style={{ fontWeight: 600, fontSize: '1.1rem', color: '#7c3aed', marginBottom: '8px' }}>
-                Analyzing your document...
-              </div>
-              <div style={{ fontSize: '14px', color: 'var(--text-muted-color, #9ca3af)' }}>
-                GPT-4o is checking for plagiarism, clichés, and originality
-              </div>
+              <div style={{ fontWeight: 600, fontSize: '1.1rem', color: '#7c3aed', marginBottom: '8px' }}>Analyzing your document...</div>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted-color, #9ca3af)' }}>AI is checking for plagiarism, clichés, and originality</div>
             </div>
           )}
 
           {result && (
             <>
-              {/* Score Card */}
-              <div style={{
-                background: `linear-gradient(135deg, ${getScoreColor(result.originalityScore)}22, ${getScoreColor(result.originalityScore)}11)`,
-                border: `2px solid ${getScoreColor(result.originalityScore)}44`,
-                borderRadius: '12px',
-                padding: '24px',
-                textAlign: 'center',
-              }}>
-                <div style={{
-                  fontSize: '5rem',
-                  fontWeight: 800,
-                  color: getScoreColor(result.originalityScore),
-                  lineHeight: 1,
-                  marginBottom: '8px',
-                }}>
-                  {result.originalityScore}%
-                </div>
-                <div style={{ fontWeight: 700, fontSize: '1.2rem', color: getScoreColor(result.originalityScore), marginBottom: '8px' }}>
-                  {getScoreLabel(result.originalityScore)}
-                </div>
-                <div style={{ fontSize: '14px', color: 'var(--text-color)', opacity: 0.8, lineHeight: 1.6 }}>
-                  {result.summary}
-                </div>
+              <div style={{ background: `linear-gradient(135deg, ${scoreColor(result.originalityScore)}22, ${scoreColor(result.originalityScore)}11)`, border: `2px solid ${scoreColor(result.originalityScore)}44`, borderRadius: '12px', padding: '24px', textAlign: 'center' }}>
+                <div style={{ fontSize: '5rem', fontWeight: 800, color: scoreColor(result.originalityScore), lineHeight: 1, marginBottom: '8px' }}>{result.originalityScore}%</div>
+                <div style={{ fontWeight: 700, fontSize: '1.2rem', color: scoreColor(result.originalityScore), marginBottom: '8px' }}>{scoreLabel(result.originalityScore)}</div>
+                <div style={{ fontSize: '14px', color: 'var(--text-color)', opacity: 0.8, lineHeight: 1.6 }}>{result.summary}</div>
               </div>
 
-              {/* Suspicious Passages */}
               {result.suspiciousPassages?.length > 0 && (
                 <div style={{ background: 'var(--surface-color, #f8fafc)', border: '1px solid #fecaca', borderRadius: '12px', padding: '20px' }}>
-                  <h3 style={{ margin: '0 0 12px', fontSize: '15px', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    ⚠️ Suspicious Passages
-                  </h3>
+                  <h3 style={{ margin: '0 0 12px', fontSize: '15px', color: '#dc2626' }}>⚠️ Suspicious Passages</h3>
                   {result.suspiciousPassages.map((p, i) => (
-                    <div key={i} style={{
-                      background: '#fef2f2',
-                      border: '1px solid #fecaca',
-                      borderRadius: '6px',
-                      padding: '10px 12px',
-                      marginBottom: '8px',
-                      fontSize: '13px',
-                      color: '#7f1d1d',
-                      fontStyle: 'italic',
-                    }}>
-                      "{p}"
-                    </div>
+                    <div key={i} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '10px 12px', marginBottom: '8px', fontSize: '13px', color: '#7f1d1d', fontStyle: 'italic' }}>"{p}"</div>
                   ))}
                 </div>
               )}
 
-              {/* Common Phrases */}
               {result.commonPhrases?.length > 0 && (
                 <div style={{ background: 'var(--surface-color, #f8fafc)', border: '1px solid #fde68a', borderRadius: '12px', padding: '20px' }}>
-                  <h3 style={{ margin: '0 0 12px', fontSize: '15px', color: '#b45309', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    💬 Common / Clichéd Phrases
-                  </h3>
+                  <h3 style={{ margin: '0 0 12px', fontSize: '15px', color: '#b45309' }}>💬 Common / Clichéd Phrases</h3>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {result.commonPhrases.map((p, i) => (
-                      <span key={i} style={{
-                        background: '#fffbeb',
-                        border: '1px solid #fcd34d',
-                        borderRadius: '20px',
-                        padding: '4px 12px',
-                        fontSize: '13px',
-                        color: '#92400e',
-                      }}>
-                        {p}
-                      </span>
+                      <span key={i} style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '20px', padding: '4px 12px', fontSize: '13px', color: '#92400e' }}>{p}</span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Suggestions */}
               {result.suggestions?.length > 0 && (
                 <div style={{ background: 'var(--surface-color, #f8fafc)', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '20px' }}>
-                  <h3 style={{ margin: '0 0 12px', fontSize: '15px', color: '#15803d', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    💡 Suggestions to Improve Originality
-                  </h3>
+                  <h3 style={{ margin: '0 0 12px', fontSize: '15px', color: '#15803d' }}>💡 Suggestions</h3>
                   {result.suggestions.map((s, i) => (
-                    <div key={i} style={{
-                      display: 'flex',
-                      gap: '10px',
-                      marginBottom: '8px',
-                      fontSize: '13px',
-                      color: 'var(--text-color)',
-                      lineHeight: 1.5,
-                    }}>
-                      <span style={{ color: '#22c55e', fontWeight: 700, flexShrink: 0 }}>{i + 1}.</span>
-                      {s}
+                    <div key={i} style={{ display: 'flex', gap: '10px', marginBottom: '8px', fontSize: '13px', color: 'var(--text-color)', lineHeight: 1.5 }}>
+                      <span style={{ color: '#22c55e', fontWeight: 700, flexShrink: 0 }}>{i + 1}.</span>{s}
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Full Report */}
               <div style={{ background: 'var(--surface-color, #f8fafc)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '20px' }}>
                 <h3 style={{ margin: '0 0 12px', fontSize: '15px', color: 'var(--text-color)' }}>📄 Full Report</h3>
-                <div style={{ fontSize: '13px', lineHeight: '1.7', color: 'var(--text-color)', whiteSpace: 'pre-wrap', opacity: 0.85 }}>
-                  {result.rawReport}
-                </div>
+                <div style={{ fontSize: '13px', lineHeight: '1.7', color: 'var(--text-color)', whiteSpace: 'pre-wrap', opacity: 0.85 }}>{result.rawReport}</div>
               </div>
             </>
           )}
