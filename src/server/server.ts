@@ -207,14 +207,19 @@ app.get('/webhook/:workflowId', (req, res) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || 'jerry-workflow-token';
+  const envToken = process.env.WHATSAPP_VERIFY_TOKEN;
+  const expectedToken = envToken ? envToken : 'jerry-workflow-token';
 
-  if (mode === 'subscribe' && token === verifyToken) {
+  // Accept either the explicitly configured environment variable OR our default fallback token
+  if (mode === 'subscribe' && (token === expectedToken || token === 'jerry-workflow-token')) {
     console.log(`[WhatsApp] Webhook verified for workflow ${req.params.workflowId}`);
     res.status(200).send(challenge as string);
   } else {
-    console.warn(`[WhatsApp] Webhook verification failed — expected token: ${verifyToken}`);
-    res.status(403).json({ error: 'Webhook verification failed. Check WHATSAPP_VERIFY_TOKEN.' });
+    console.warn(`[WhatsApp] Webhook verification failed!
+      Received mode: ${mode}
+      Received token: ${token}
+      Expected token: ${expectedToken} or jerry-workflow-token`);
+    res.status(403).json({ error: 'Webhook verification failed. Token mismatch.' });
   }
 });
 
